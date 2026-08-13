@@ -59,7 +59,7 @@ export default function Layout() {
         <img
           src="/logo.png"
           alt="OPTIVISION"
-          style={{ height: 68, width: 'auto', objectFit: 'contain' }}
+          style={{ height: 90, width: 'auto', objectFit: 'contain' }}
         />
         {/* Close button – only visible on mobile */}
         <button
