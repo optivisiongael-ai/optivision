@@ -66,7 +66,7 @@ export default function Login() {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <img
-            src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
+            src="/logo.png"
             alt="OPTIVISION"
             style={{ height: 160, width: 'auto', objectFit: 'contain', margin: '0 auto', display: 'block' }}
           />

@@ -57,7 +57,7 @@ export default function Layout() {
           : 'linear-gradient(135deg, rgba(0,80,180,0.04), transparent)',
       }}>
         <img
-          src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
+          src="/logo.png"
           alt="OPTIVISION"
           style={{ height: 68, width: 'auto', objectFit: 'contain' }}
         />
@@ -224,7 +224,7 @@ export default function Layout() {
             <Menu size={20} />
           </button>
           <img
-            src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
+            src="/logo.png"
             alt="OPTIVISION"
             style={{ height: 38, width: 'auto', objectFit: 'contain' }}
           />
