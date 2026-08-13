@@ -1,0 +1,413 @@
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase/client';
+import { useAuth } from '../lib/supabase/auth';
+import {
+  Users, Plus, KeyRound, Shield, Copy, Check, Store,
+  X, AlertCircle, Eye, EyeOff, Pencil, Trash2
+} from 'lucide-react';
+
+// ── User Management ────────────────────────────────────────────
+function UserManagement() {
+  const { profile } = useAuth();
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('VENDEDOR');
+  const [storeId, setStoreId] = useState('');
+  const [stores, setStores] = useState<any[]>([]);
+  const [createMsg, setCreateMsg] = useState<{ type: 'ok' | 'error'; text: string; password?: string } | null>(null);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [copiedCreate, setCopiedCreate] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [resetMsg, setResetMsg] = useState<{ type: 'ok' | 'error'; text: string; password?: string; userId?: string } | null>(null);
+  const [resetLoadingId, setResetLoadingId] = useState<string | null>(null);
+  const [toggleLoadingId, setToggleLoadingId] = useState<string | null>(null);
+  const [copiedReset, setCopiedReset] = useState(false);
+
+  useEffect(() => {
+    fetchUsers();
+    supabase.from('stores').select('id, name').eq('active', true).order('name').then(({ data }) => setStores(data || []));
+  }, []);
+
+  const fetchUsers = async () => {
+    setUsersLoading(true);
+    const { data } = await supabase.from('profiles').select('id, email, full_name, role, active, store_id, stores(name)').neq('role', 'ADMIN').order('created_at', { ascending: false });
+    setUsers(data || []);
+    setUsersLoading(false);
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setCreateLoading(true); setCreateMsg(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-invite-user', {
+        body: { action: 'create', email: email.trim(), role, store_id: role === 'VENDEDOR' ? storeId || null : null, invited_by: profile?.email },
+        headers: { 'x-api-key': import.meta.env.VITE_AGENT_API_KEY },
+      });
+      if (error || !data?.success) {
+        setCreateMsg({ type: 'error', text: data?.error || error?.message || 'Error al crear usuario' });
+      } else {
+        setCreateMsg({ type: 'ok', text: '✅ Usuario creado', password: data.generated_password });
+        setEmail(''); setRole('VENDEDOR'); setStoreId('');
+        fetchUsers();
+      }
+    } catch (err: any) {
+      setCreateMsg({ type: 'error', text: err.message || 'Error de conexión' });
+    }
+    setCreateLoading(false);
+  };
+
+  const handleResetPassword = async (userEmail: string, userId: string) => {
+    setResetLoadingId(userId); setResetMsg(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-invite-user', {
+        body: { action: 'reset', email: userEmail, invited_by: profile?.email },
+        headers: { 'x-api-key': import.meta.env.VITE_AGENT_API_KEY },
+      });
+      if (error || !data?.success) {
+        setResetMsg({ type: 'error', text: data?.error || error?.message || 'Error al resetear', userId });
+      } else {
+        setResetMsg({ type: 'ok', text: '✅ Password reseteado', password: data.new_password, userId });
+      }
+    } catch (err: any) { setResetMsg({ type: 'error', text: err.message, userId }); }
+    setResetLoadingId(null);
+  };
+
+  const handleToggleActive = async (userId: string, current: boolean) => {
+    setToggleLoadingId(userId);
+    await supabase.from('profiles').update({ active: !current }).eq('id', userId);
+    fetchUsers();
+    setToggleLoadingId(null);
+  };
+
+  const copy = (text: string, type: 'create' | 'reset') => {
+    navigator.clipboard.writeText(text);
+    if (type === 'create') { setCopiedCreate(true); setTimeout(() => setCopiedCreate(false), 2000); }
+    else { setCopiedReset(true); setTimeout(() => setCopiedReset(false), 2000); }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {/* Create user */}
+      <div className="card">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '1.25rem' }}>
+          <div className="icon-box icon-box-teal"><Plus size={18} /></div>
+          <h3 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-primary)' }}>Crear Usuario</h3>
+        </div>
+
+        <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: 420 }}>
+          <div>
+            <label className="label" htmlFor="new-user-email">Email</label>
+            <input id="new-user-email" className="input" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="vendedor@optica.com" />
+          </div>
+          <div>
+            <label className="label" htmlFor="new-user-role">Rol</label>
+            <select id="new-user-role" className="input" value={role} onChange={e => setRole(e.target.value)}>
+              <option value="VENDEDOR">Vendedor</option>
+              <option value="ADMIN">Administrador</option>
+            </select>
+          </div>
+          {role === 'VENDEDOR' && stores.length > 0 && (
+            <div>
+              <label className="label" htmlFor="new-user-store">Tienda Asignada</label>
+              <select id="new-user-store" className="input" value={storeId} onChange={e => setStoreId(e.target.value)}>
+                <option value="">Sin tienda asignada</option>
+                {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          <button type="submit" disabled={createLoading} className="btn btn-primary">
+            {createLoading ? <><div className="spinner" style={{ width: 16, height: 16 }} /> Creando...</> : <><Users size={15} /> Crear Usuario</>}
+          </button>
+
+          {createMsg && (
+            <div className={`alert ${createMsg.type === 'ok' ? 'alert-success' : 'alert-error'} fade-in`}>
+              {createMsg.type === 'error' ? <AlertCircle size={15} /> : <Check size={15} />}
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: 600 }}>{createMsg.text}</p>
+                {createMsg.password && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <p style={{ fontSize: '0.8rem', marginBottom: '0.375rem' }}>🔑 Contraseña temporal:</p>
+                    <div style={{ display: 'flex', alignItems: 'center', background: 'var(--color-bg-input)', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(16,185,129,0.3)' }}>
+                      <span style={{ flex: 1, padding: '0.375rem 0.75rem', fontFamily: 'monospace', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>{createMsg.password}</span>
+                      <button type="button" onClick={() => copy(createMsg.password!, 'create')} style={{ padding: '0.375rem 0.625rem', background: 'rgba(16,185,129,0.15)', border: 'none', cursor: 'pointer', color: '#34d399', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem' }}>
+                        {copiedCreate ? <><Check size={12} /> Copiado</> : <><Copy size={12} /> Copiar</>}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </form>
+      </div>
+
+      {/* Users list */}
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+          <div className="icon-box icon-box-blue"><Users size={18} /></div>
+          <h3 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-primary)' }}>Vendedores</h3>
+        </div>
+        <div>
+          {usersLoading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}><div className="spinner" /></div>
+          ) : users.length === 0 ? (
+            <p style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Sin usuarios creados</p>
+          ) : users.map(u => (
+            <div key={u.id} style={{
+              display: 'flex', alignItems: 'center', gap: '1rem',
+              padding: '1rem 1.5rem',
+              borderBottom: '1px solid rgba(255,255,255,0.04)',
+              background: u.active ? 'transparent' : 'rgba(239,68,68,0.04)',
+              flexWrap: 'wrap',
+            }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(6,182,212,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'var(--color-brand-400)', flexShrink: 0 }}>
+                {u.email.charAt(0).toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {u.full_name || u.email}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                  {u.email}
+                  {u.stores?.name && ` · ${u.stores.name}`}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <span className={`badge ${u.role === 'ADMIN' ? 'badge-teal' : 'badge-blue'}`}>{u.role}</span>
+                {!u.active && <span className="badge badge-red">Inactivo</span>}
+                <button
+                  onClick={() => handleToggleActive(u.id, u.active)}
+                  disabled={toggleLoadingId === u.id}
+                  className={`btn btn-sm ${u.active ? 'btn-danger' : 'btn-success'}`}
+                >
+                  {toggleLoadingId === u.id ? '...' : u.active ? 'Desactivar' : 'Activar'}
+                </button>
+                <button
+                  onClick={() => handleResetPassword(u.email, u.id)}
+                  disabled={resetLoadingId === u.id || !u.active}
+                  className="btn btn-secondary btn-sm"
+                >
+                  <KeyRound size={13} />
+                  {resetLoadingId === u.id ? 'Reseteando...' : 'Reset'}
+                </button>
+              </div>
+              {resetMsg?.userId === u.id && (
+                <div className={`alert ${resetMsg.type === 'ok' ? 'alert-success' : 'alert-error'} fade-in`} style={{ width: '100%', padding: '0.5rem 0.75rem' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.8rem' }}>{resetMsg.text}</span>
+                  {resetMsg.password && (
+                    <div style={{ display: 'flex', alignItems: 'center', background: 'var(--color-bg-input)', borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(16,185,129,0.3)', marginTop: 4 }}>
+                      <span style={{ flex: 1, padding: '0.25rem 0.5rem', fontFamily: 'monospace', fontSize: '0.8rem' }}>{resetMsg.password}</span>
+                      <button type="button" onClick={() => copy(resetMsg.password!, 'reset')} style={{ padding: '0.25rem 0.5rem', background: 'rgba(16,185,129,0.15)', border: 'none', cursor: 'pointer', color: '#34d399', fontSize: '0.7rem', display: 'flex', gap: '0.25rem' }}>
+                        {copiedReset ? <Check size={11} /> : <Copy size={11} />}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Store Management ────────────────────────────────────────────
+function StoreManagement() {
+  const [stores, setStores] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: '', address: '', phone: '' });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
+
+  useEffect(() => { fetchStores(); }, []);
+
+  const fetchStores = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('stores').select('*').order('name');
+    setStores(data || []);
+    setLoading(false);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true); setMsg(null);
+    const payload = { name: form.name.trim(), address: form.address.trim(), phone: form.phone.trim(), active: true };
+    const { error } = editId
+      ? await supabase.from('stores').update(payload).eq('id', editId)
+      : await supabase.from('stores').insert(payload);
+    if (error) { setMsg({ type: 'error', text: error.message }); }
+    else { setMsg({ type: 'ok', text: editId ? '✅ Tienda actualizada' : '✅ Tienda creada' }); fetchStores(); setTimeout(() => { setShowForm(false); setMsg(null); }, 1200); }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+          <div className="icon-box icon-box-green"><Store size={18} /></div>
+          <h3 style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-text-primary)' }}>Tiendas ({stores.length})</h3>
+        </div>
+        <button onClick={() => { setForm({ name: '', address: '', phone: '' }); setEditId(null); setShowForm(true); setMsg(null); }} className="btn btn-primary btn-sm">
+          <Plus size={14} /> Nueva Tienda
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="card fade-in" style={{ border: '1px solid var(--color-brand-700)', background: 'rgba(8,145,178,0.06)' }}>
+          <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+              <div>
+                <label className="label">Nombre *</label>
+                <input className="input" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Tienda Centro" />
+              </div>
+              <div>
+                <label className="label">Dirección</label>
+                <input className="input" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Av. Ayacucho 123" />
+              </div>
+              <div>
+                <label className="label">Teléfono</label>
+                <input className="input" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+591 70000000" />
+              </div>
+            </div>
+            {msg && <div className={`alert ${msg.type === 'ok' ? 'alert-success' : 'alert-error'}`}>{msg.text}</div>}
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setShowForm(false)} className="btn btn-secondary btn-sm">Cancelar</button>
+              <button type="submit" disabled={saving} className="btn btn-primary btn-sm">
+                {saving ? 'Guardando...' : editId ? 'Actualizar' : 'Crear Tienda'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+        {loading ? <div className="spinner" /> : stores.map(s => (
+          <div key={s.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <div className="icon-box icon-box-teal"><Eye size={18} /></div>
+              <div style={{ display: 'flex', gap: '0.375rem' }}>
+                <button onClick={() => { setForm({ name: s.name, address: s.address || '', phone: s.phone || '' }); setEditId(s.id); setShowForm(true); setMsg(null); }} className="btn btn-ghost btn-icon btn-sm">
+                  <Pencil size={13} />
+                </button>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-text-primary)' }}>{s.name}</div>
+              {s.address && <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>{s.address}</div>}
+              {s.phone && <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{s.phone}</div>}
+            </div>
+            <span className={`badge ${s.active ? 'badge-green' : 'badge-red'}`} style={{ alignSelf: 'flex-start' }}>
+              {s.active ? 'Activa' : 'Inactiva'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Profile Section ─────────────────────────────────────────────
+function ProfileSection() {
+  const { profile } = useAuth();
+  const [newPwd, setNewPwd] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [pwdMsg, setPwdMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
+  const [pwdLoading, setPwdLoading] = useState(false);
+
+  const handleChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPwd !== confirmPwd) { setPwdMsg({ type: 'error', text: 'Las contraseñas no coinciden' }); return; }
+    if (newPwd.length < 6) { setPwdMsg({ type: 'error', text: 'Mínimo 6 caracteres' }); return; }
+    setPwdLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPwd });
+    if (error) { setPwdMsg({ type: 'error', text: error.message }); }
+    else { setPwdMsg({ type: 'ok', text: '✅ Contraseña actualizada' }); setNewPwd(''); setConfirmPwd(''); }
+    setPwdLoading(false);
+  };
+
+  return (
+    <div className="card" style={{ maxWidth: 480 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg, var(--color-brand-700), var(--color-brand-500))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.25rem', color: 'white' }}>
+          {(profile?.email || '?').charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <div style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{profile?.email}</div>
+          <span className="badge badge-teal">⚡ {profile?.role}</span>
+        </div>
+      </div>
+
+      <div className="divider" />
+      <h4 style={{ fontWeight: 600, marginBottom: '1rem', color: 'var(--color-text-primary)' }}>Cambiar Contraseña</h4>
+      <form onSubmit={handleChange} style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+        <div style={{ position: 'relative' }}>
+          <input className="input" type={showPwd ? 'text' : 'password'} value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="Nueva contraseña" style={{ paddingRight: '2.5rem' }} />
+          <button type="button" onClick={() => setShowPwd(v => !v)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
+            {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        </div>
+        <input className="input" type={showPwd ? 'text' : 'password'} value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)} placeholder="Confirmar contraseña" />
+        {pwdMsg && <div className={`alert ${pwdMsg.type === 'ok' ? 'alert-success' : 'alert-error'}`}>{pwdMsg.text}</div>}
+        <button type="submit" disabled={pwdLoading} className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }}>
+          {pwdLoading ? 'Guardando...' : 'Actualizar Contraseña'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// ── Settings Page ───────────────────────────────────────────────
+type Tab = 'users' | 'stores' | 'profile';
+
+export default function Settings() {
+  const [tab, setTab] = useState<Tab>('users');
+
+  const tabs: { id: Tab; label: string; icon: string }[] = [
+    { id: 'users', label: 'Usuarios', icon: '👥' },
+    { id: 'stores', label: 'Tiendas', icon: '🏪' },
+    { id: 'profile', label: 'Mi Perfil', icon: '👤' },
+  ];
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">⚙️ Configuración</h1>
+          <p className="page-subtitle">Gestiona usuarios, tiendas y configuración del sistema</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '2rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0' }}>
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            style={{
+              padding: '0.625rem 1.25rem', border: 'none', cursor: 'pointer',
+              background: 'transparent', fontFamily: 'inherit', fontSize: '0.875rem', fontWeight: 600,
+              color: tab === t.id ? 'var(--color-brand-400)' : 'var(--color-text-muted)',
+              borderBottom: tab === t.id ? '2px solid var(--color-brand-500)' : '2px solid transparent',
+              transition: 'all 0.15s',
+              gap: '0.5rem', display: 'flex', alignItems: 'center',
+            }}
+          >
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="fade-in" key={tab}>
+        {tab === 'users' && <UserManagement />}
+        {tab === 'stores' && <StoreManagement />}
+        {tab === 'profile' && <ProfileSection />}
+      </div>
+    </div>
+  );
+}
