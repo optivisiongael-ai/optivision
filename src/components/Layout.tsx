@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Warehouse, Settings, ShoppingCart,
-  Users, Activity, LogOut, Menu, X, Eye, ChevronRight
+  Users, Activity, LogOut, Menu, X, Eye, ChevronRight, Moon, Sun
 } from 'lucide-react';
 import { useAuth } from '../lib/supabase/auth';
 
@@ -11,6 +11,13 @@ export default function Layout() {
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+
+  // Change theme effect
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   const isAdmin = profile?.role === 'ADMIN';
 
@@ -153,11 +160,19 @@ export default function Layout() {
       </nav>
 
       {/* Footer */}
-      <div style={{ padding: '1rem', borderTop: '1px solid var(--color-border)' }}>
+      <div style={{ padding: '1rem', borderTop: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <button
+          onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+          className="btn btn-ghost"
+          style={{ width: '100%', gap: '0.625rem', color: 'var(--color-text-secondary)', justifyContent: 'flex-start' }}
+        >
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          {theme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
+        </button>
         <button
           onClick={handleSignOut}
           className="btn btn-ghost"
-          style={{ width: '100%', color: '#f87171', gap: '0.625rem' }}
+          style={{ width: '100%', color: '#f87171', gap: '0.625rem', justifyContent: 'flex-start' }}
         >
           <LogOut size={16} />
           Cerrar Sesión
