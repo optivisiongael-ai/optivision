@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
 import {
-  Users, Plus, KeyRound, Shield, Copy, Check, Store,
-  X, AlertCircle, Eye, EyeOff, Pencil, Trash2
+  Users, Plus, KeyRound, Copy, Check, Store,
+  AlertCircle, Eye, EyeOff, Pencil
 } from 'lucide-react';
 
 // ── User Management ────────────────────────────────────────────
@@ -193,7 +193,7 @@ function UserManagement() {
                   {resetLoadingId === u.id ? 'Reseteando...' : 'Reset'}
                 </button>
               </div>
-              {resetMsg?.userId === u.id && (
+              {resetMsg && resetMsg.userId === u.id && (
                 <div className={`alert ${resetMsg.type === 'ok' ? 'alert-success' : 'alert-error'} fade-in`} style={{ width: '100%', padding: '0.5rem 0.75rem' }}>
                   <span style={{ fontWeight: 600, fontSize: '0.8rem' }}>{resetMsg.text}</span>
                   {resetMsg.password && (

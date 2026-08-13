@@ -5,7 +5,7 @@ import SearchableDropdown from '../components/shared/SearchableDropdown';
 import ReceiptPreview from '../components/shared/ReceiptPreview';
 import {
   Search, UserPlus, ShoppingCart, ChevronRight, ChevronLeft,
-  Plus, Minus, X, Check, AlertCircle, Eye
+  Plus, Minus, X, Check, AlertCircle
 } from 'lucide-react';
 
 const fmt = (n: number) => `Bs. ${n.toLocaleString('es-BO', { minimumFractionDigits: 2 })}`;

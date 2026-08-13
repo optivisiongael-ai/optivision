@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
-import { Warehouse, RefreshCw, Edit2, AlertTriangle, Check, X, Settings2 } from 'lucide-react';
+import { RefreshCw, Edit2, AlertTriangle, Check, X, Settings2 } from 'lucide-react';
 
 export default function Inventory() {
   const { profile } = useAuth();

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
-import { Search, UserPlus, Edit2, X, Check, Hash, Phone, Mail, Eye } from 'lucide-react';
+import { Search, Edit2, X, Check, Hash, Phone, Mail, Eye } from 'lucide-react';
 
 const fmt = (n: number) => `Bs. ${n.toLocaleString('es-BO', { minimumFractionDigits: 2 })}`;
 const emptyMeasures = { od_sphere: '', od_cylinder: '', od_axis: '', od_add: '', oi_sphere: '', oi_cylinder: '', oi_axis: '', oi_add: '', dip: '' };
