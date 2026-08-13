@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Warehouse, Settings, ShoppingCart,
-  Users, Activity, LogOut, Menu, X, Eye, ChevronRight, Moon, Sun
+  Users, Activity, LogOut, Menu, X, ChevronRight, Moon, Sun
 } from 'lucide-react';
 import { useAuth } from '../lib/supabase/auth';
 
@@ -48,30 +48,21 @@ export default function Layout() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Logo */}
       <div style={{
-        padding: '1.25rem 1.5rem',
+        padding: '0.75rem 1.25rem',
         borderBottom: '1px solid var(--color-border)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        background: 'linear-gradient(135deg, rgba(8,145,178,0.08), transparent)',
+        background: theme === 'dark'
+          ? 'linear-gradient(135deg, rgba(255,180,0,0.05), transparent)'
+          : 'linear-gradient(135deg, rgba(0,80,180,0.04), transparent)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-          <div style={{
-            width: 38, height: 38, borderRadius: 10,
-            background: 'linear-gradient(135deg, var(--color-brand-600), var(--color-brand-400))',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 15px rgba(6,182,212,0.35)',
-          }}>
-            <Eye size={18} color="white" />
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--color-brand-400)', letterSpacing: '-0.02em' }}>
-              OPTIVISION
-            </div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', letterSpacing: '0.06em' }}>
-              SISTEMA ÓPTICA
-            </div>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <img
+            src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
+            alt="OPTIVISION"
+            style={{ height: 72, width: 'auto', objectFit: 'contain' }}
+          />
         </div>
         {/* Mobile close */}
         <button
@@ -230,9 +221,12 @@ export default function Layout() {
           <button onClick={() => setSidebarOpen(true)} className="btn btn-ghost btn-icon">
             <Menu size={20} />
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Eye size={16} color="var(--color-brand-400)" />
-            <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--color-brand-400)' }}>OPTIVISION</span>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <img
+              src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
+              alt="OPTIVISION"
+              style={{ height: 40, width: 'auto', objectFit: 'contain' }}
+            />
           </div>
         </header>
 

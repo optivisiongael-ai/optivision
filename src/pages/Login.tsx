@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
-import { Eye, EyeOff, AlertCircle, Lock, Mail } from 'lucide-react';
+import { EyeOff, Eye, AlertCircle, Lock, Mail } from 'lucide-react';
 
 export default function Login() {
   const { session } = useAuth();
@@ -12,6 +12,12 @@ export default function Login() {
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+
+  useEffect(() => {
+    const stored = localStorage.getItem('theme') || 'dark';
+    setTheme(stored);
+  }, []);
 
   if (session) return <Navigate to="/" replace />;
 
@@ -52,27 +58,12 @@ export default function Login() {
 
       <div className="fade-in" style={{ width: '100%', maxWidth: 420, position: 'relative', zIndex: 1 }}>
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: 20,
-            background: 'linear-gradient(135deg, var(--color-brand-700), var(--color-brand-500))',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 1.25rem',
-            boxShadow: '0 8px 32px rgba(6,182,212,0.4)',
-          }}>
-            <Eye size={32} color="white" />
-          </div>
-          <h1 style={{
-            fontWeight: 900, fontSize: '2rem', letterSpacing: '-0.04em',
-            background: 'linear-gradient(135deg, #f0f9ff, var(--color-brand-400))',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}>
-            OPTIVISION
-          </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem', marginTop: '0.375rem' }}>
-            Sistema de Gestión para Óptica
-          </p>
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <img
+            src={theme === 'dark' ? '/logo-dark.png' : '/logo-light.png'}
+            alt="OPTIVISION"
+            style={{ height: 160, width: 'auto', objectFit: 'contain', margin: '0 auto', display: 'block' }}
+          />
         </div>
 
         {/* Config warning when .env is not set */}
