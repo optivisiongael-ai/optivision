@@ -33,9 +33,9 @@ DROP POLICY IF EXISTS "profiles_select" ON public.profiles;
 DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
 DROP POLICY IF EXISTS "profiles_admin_all" ON public.profiles;
 
--- Cualquier usuario autenticado puede ver su propio perfil
+-- Cualquier usuario autenticado puede ver su propio perfil (sin recursión)
 CREATE POLICY "profiles_select_own" ON public.profiles
-  FOR SELECT USING (id = auth.uid() OR public.current_user_role() = 'ADMIN');
+  FOR SELECT USING (id = auth.uid());
 
 -- Admin puede modificar todos los perfiles
 CREATE POLICY "profiles_admin_update" ON public.profiles
