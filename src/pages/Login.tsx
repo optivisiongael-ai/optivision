@@ -13,7 +13,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   // Read theme from localStorage OR from the data-theme already applied to document
-  const [theme, setTheme] = useState(() => {
+  const [theme] = useState(() => {
     const stored = localStorage.getItem('theme');
     const docAttr = document.documentElement.getAttribute('data-theme');
     return stored || docAttr || 'light'; // CSS :root defaults to light
