@@ -68,7 +68,7 @@ export default function Login() {
           <img
             src="/logo.png"
             alt="OPTIVISION"
-            style={{ height: 240, width: 'auto', objectFit: 'contain', margin: '0 auto', display: 'block' }}
+            style={{ height: 300, width: 'auto', objectFit: 'contain', margin: '0 auto', display: 'block' }}
           />
         </div>
 

@@ -56,11 +56,13 @@ export default function Layout() {
           ? 'linear-gradient(135deg, rgba(255,180,0,0.05), transparent)'
           : 'linear-gradient(135deg, rgba(0,80,180,0.04), transparent)',
       }}>
-        <img
-          src="/logo.png"
-          alt="OPTIVISION"
-          style={{ height: 90, width: 'auto', objectFit: 'contain' }}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+          <img
+            src="/logo.png"
+            alt="OPTIVISION"
+            style={{ height: 110, width: 'auto', objectFit: 'contain' }}
+          />
+        </div>
         {/* Close button – only visible on mobile */}
         <button
           onClick={closeSidebar}
