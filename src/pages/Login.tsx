@@ -12,12 +12,18 @@ export default function Login() {
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  // Read theme from localStorage OR from the data-theme already applied to document
+  const [theme, setTheme] = useState(() => {
+    const stored = localStorage.getItem('theme');
+    const docAttr = document.documentElement.getAttribute('data-theme');
+    return stored || docAttr || 'light'; // CSS :root defaults to light
+  });
 
   useEffect(() => {
-    const stored = localStorage.getItem('theme') || 'dark';
-    setTheme(stored);
-  }, []);
+    // Apply theme to document so CSS vars and logo are always in sync
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   if (session) return <Navigate to="/" replace />;
 
