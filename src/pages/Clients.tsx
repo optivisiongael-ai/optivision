@@ -4,6 +4,7 @@ import { useAuth } from '../lib/supabase/auth';
 import { Search, Edit2, X, Hash, Phone, Mail, Eye, Save, ChevronDown, ChevronUp } from 'lucide-react';
 import { fetchCatalogByTypes } from '../lib/useCatalog';
 import type { CatalogOption } from '../lib/useCatalog';
+import { todayStr, TIME_SLOTS } from '../lib/dateUtils';
 
 const fmt = (n: number) => `Bs. ${n.toLocaleString('es-BO', { minimumFractionDigits: 2 })}`;
 
@@ -46,6 +47,18 @@ export default function Clients() {
       setCrystalTypes(cat.CRYSTAL_TYPE || []);
     });
   }, []);
+
+  // Guard: warn when there are unsaved client edits
+  useEffect(() => {
+    const guard = (e: BeforeUnloadEvent) => {
+      if (editing) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', guard);
+    return () => window.removeEventListener('beforeunload', guard);
+  }, [editing]);
 
   const searchClients = useCallback(async (q: string) => {
     setLoading(true);
@@ -284,8 +297,13 @@ export default function Clients() {
                       {crystalTypes.map(v => <option key={v.value} value={v.label}>{v.label}</option>)}
                     </select>
                   </div>
-                  <div><label className="label">Fecha Entrega</label><input className="input input-sm" type="date" value={f('delivery_date')} onChange={set('delivery_date')} /></div>
-                  <div><label className="label">Hora Entrega</label><input className="input input-sm" type="time" value={f('delivery_time')} onChange={set('delivery_time')} /></div>
+                  <div><label className="label">Fecha Entrega</label><input className="input input-sm" type="date" min={todayStr()} value={f('delivery_date')} onChange={set('delivery_date')} /></div>
+                  <div><label className="label">Hora Entrega</label>
+                    <select className="input input-sm" value={f('delivery_time')} onChange={e => setEditForm(prev => ({ ...prev, delivery_time: e.target.value }))}>
+                      <option value="">-- Hora --</option>
+                      {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
                 </div>
 
                 {/* LEJOS */}

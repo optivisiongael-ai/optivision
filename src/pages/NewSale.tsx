@@ -7,6 +7,7 @@ import { Search, UserPlus, ShoppingCart, ChevronRight, ChevronLeft,
 } from 'lucide-react';
 import { fetchCatalogByTypes } from '../lib/useCatalog';
 import type { CatalogOption } from '../lib/useCatalog';
+import { todayStr, TIME_SLOTS } from '../lib/dateUtils';
 
 const fmt = (n: number) => `Bs. ${n.toLocaleString('es-BO', { minimumFractionDigits: 2 })}`;
 const APP_URL = window.location.origin + window.location.pathname;
@@ -87,6 +88,18 @@ export default function NewSale() {
       }
     });
   }, [profile?.store_id]);
+
+  // Guard: warn on unsaved sale in progress
+  useEffect(() => {
+    const guard = (e: BeforeUnloadEvent) => {
+      if (step !== 'client' || saleItems.length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', guard);
+    return () => window.removeEventListener('beforeunload', guard);
+  }, [step, saleItems.length]);
 
   const searchClients = useCallback(async (q: string) => {
     if (!q.trim()) { setSearchResults([]); return; }
@@ -374,8 +387,13 @@ export default function NewSale() {
                         {crystalTypes.map(v => <option key={v.value} value={v.label}>{v.label}</option>)}
                       </select>
                     </div>
-                    <div><label className="label">Entrega</label><input className="input input-sm" type="date" value={(newClientForm as any).delivery_date || ''} onChange={e => setNewClientForm(f => ({ ...f, delivery_date: e.target.value }))} /></div>
-                    <div><label className="label">Hora Entrega</label><input className="input input-sm" type="time" value={(newClientForm as any).delivery_time || ''} onChange={e => setNewClientForm(f => ({ ...f, delivery_time: e.target.value }))} /></div>
+                    <div><label className="label">Entrega</label><input className="input input-sm" type="date" min={todayStr()} value={(newClientForm as any).delivery_date || ''} onChange={e => setNewClientForm(f => ({ ...f, delivery_date: e.target.value }))} /></div>
+                    <div><label className="label">Hora Entrega</label>
+                      <select className="input input-sm" value={(newClientForm as any).delivery_time || ''} onChange={e => setNewClientForm(f => ({ ...f, delivery_time: e.target.value }))}>
+                        <option value="">-- Hora --</option>
+                        {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
                   </div>
 
                   {/* LEJOS */}

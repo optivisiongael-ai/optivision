@@ -5,7 +5,7 @@ import { fetchCatalogByTypes } from '../lib/useCatalog';
 import type { CatalogOption } from '../lib/useCatalog';
 import {
   Plus, Search, Package, Edit2, Trash2, X, Check,
-  AlertCircle, ChevronDown, ChevronUp, Settings2,
+  AlertCircle, ChevronDown, ChevronUp, Settings2, PackagePlus,
 } from 'lucide-react';
 
 const fmt = (n: number) => `Bs. ${n.toLocaleString('es-BO', { minimumFractionDigits: 2 })}`;
@@ -115,6 +115,12 @@ export default function Products() {
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [showCatalog, setShowCatalog] = useState(false);
 
+  // Replenishment modal
+  const [restockProduct, setRestockProduct] = useState<any | null>(null);
+  const [storeInventory, setStoreInventory] = useState<{ store_id: string; store_name: string; current: number; add: string }[]>([]);
+  const [restockSaving, setRestockSaving] = useState(false);
+  const [restockMsg, setRestockMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
+
   // Catalog options
   const [categories, setCategories] = useState<CatalogOption[]>([]);
   const [frameTypes, setFrameTypes] = useState<CatalogOption[]>([]);
@@ -148,6 +154,52 @@ export default function Products() {
     setForm({ ...emptyForm, category: defaultCat });
     setEditId(null); setShowForm(true); setMsg(null);
   };
+  const openRestock = async (p: any) => {
+    setRestockProduct(p);
+    setRestockMsg(null);
+    // Load stores + current inventory for this product
+    const [storesRes, invRes] = await Promise.all([
+      supabase.from('stores').select('id, name').eq('active', true).order('name'),
+      supabase.from('inventory').select('store_id, quantity').eq('product_id', p.id),
+    ]);
+    const invMap: Record<string, number> = {};
+    for (const i of invRes.data || []) invMap[i.store_id] = i.quantity;
+    setStoreInventory((storesRes.data || []).map((s: any) => ({
+      store_id: s.id, store_name: s.name,
+      current: invMap[s.id] ?? 0, add: '',
+    })));
+  };
+
+  const handleRestock = async () => {
+    if (!restockProduct) return;
+    setRestockSaving(true); setRestockMsg(null);
+    const toUpdate = storeInventory.filter(s => parseInt(s.add) > 0);
+    if (toUpdate.length === 0) { setRestockMsg({ type: 'error', text: 'Ingresa al menos una cantidad a reponer.' }); setRestockSaving(false); return; }
+
+    const errors: string[] = [];
+    for (const s of toUpdate) {
+      const qty = parseInt(s.add);
+      const newQty = s.current + qty;
+      const { error } = await supabase.from('inventory')
+        .upsert({ product_id: restockProduct.id, store_id: s.store_id, quantity: newQty }, { onConflict: 'product_id,store_id' });
+      if (error) { errors.push(s.store_name); continue; }
+      await supabase.from('audit_log').insert({
+        user_id: profile?.id, user_email: profile?.email,
+        action: 'STOCK_REPLENISHMENT',
+        entity_type: 'PRODUCT', entity_id: restockProduct.id,
+        description: `Reabastecimiento: ${restockProduct.name} (${restockProduct.sku_code}) — Tienda: ${s.store_name} +${qty} unidades (${s.current} → ${newQty})`,
+      });
+    }
+
+    if (errors.length > 0) {
+      setRestockMsg({ type: 'error', text: `Error en tiendas: ${errors.join(', ')}` });
+    } else {
+      setRestockMsg({ type: 'ok', text: '✅ Stock actualizado correctamente' });
+      setTimeout(() => { setRestockProduct(null); setRestockMsg(null); }, 1200);
+    }
+    setRestockSaving(false);
+  };
+
   const openEdit = (p: any) => {
     setForm({ sku_code: p.sku_code, name: p.name, description: p.description || '', category: p.category, price: String(p.price), initial_stock: '0', min_stock_alert: String(p.min_stock_alert ?? 5), max_discount: String(p.max_discount ?? 0) });
     setEditId(p.id); setShowForm(true); setMsg(null);
@@ -355,6 +407,9 @@ export default function Products() {
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button onClick={() => openEdit(p)} className="btn btn-ghost btn-sm btn-icon" title="Editar"><Edit2 size={14} /></button>
                       {p.active && (
+                        <button onClick={() => openRestock(p)} className="btn btn-secondary btn-sm btn-icon" title="Reponer stock"><PackagePlus size={14} /></button>
+                      )}
+                      {p.active && (
                         <button onClick={() => handleDelete(p.id, p.name)} disabled={deleteLoading === p.id} className="btn btn-danger btn-sm btn-icon" title="Desactivar">
                           {deleteLoading === p.id ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Trash2 size={14} />}
                         </button>
@@ -432,6 +487,68 @@ export default function Products() {
             </div>
           </div>
         )}
+
+      {/* ── Replenishment Modal ─────────────────────────────── */}
+      {restockProduct && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="card modal-content fade-in" style={{ width: '100%', maxWidth: 460 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <div>
+                <h2 style={{ fontWeight: 700, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <PackagePlus size={18} style={{ color: 'var(--color-brand-400)' }} /> Reponer Stock
+                </h2>
+                <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
+                  {restockProduct.name} <span style={{ fontFamily: 'monospace', color: 'var(--color-brand-400)' }}>({restockProduct.sku_code})</span>
+                </p>
+              </div>
+              <button onClick={() => setRestockProduct(null)} className="btn btn-ghost btn-icon"><X size={18} /></button>
+            </div>
+
+            {restockMsg && (
+              <div className={`alert ${restockMsg.type === 'ok' ? 'alert-success' : 'alert-error'} fade-in`} style={{ marginBottom: '1rem' }}>
+                {restockMsg.type === 'ok' ? <Check size={15} /> : <AlertCircle size={15} />} {restockMsg.text}
+              </div>
+            )}
+
+            {storeInventory.length === 0 ? (
+              <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '1rem' }}>Cargando tiendas...</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                {storeInventory.map((s, idx) => (
+                  <div key={s.store_id} style={{ display: 'grid', gridTemplateColumns: '1fr auto 110px', gap: '0.75rem', alignItems: 'center', padding: '0.75rem', background: 'var(--color-bg-input)', borderRadius: 10, border: '1px solid var(--color-border)' }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{s.store_name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                        Stock actual: <strong style={{ color: s.current === 0 ? '#ef4444' : s.current <= 5 ? '#f59e0b' : 'var(--color-brand-400)' }}>{s.current}</strong>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>+ unidades</span>
+                    <input
+                      className="input"
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="0"
+                      value={s.add}
+                      onChange={e => setStoreInventory(prev => prev.map((si, i) => i === idx ? { ...si, add: e.target.value } : si))}
+                      style={{ textAlign: 'center' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => setRestockProduct(null)} className="btn btn-secondary">Cancelar</button>
+              <button onClick={handleRestock} disabled={restockSaving} className="btn btn-primary">
+                {restockSaving
+                  ? <><div className="spinner" style={{ width: 16, height: 16 }} /> Guardando...</>
+                  : <><PackagePlus size={15} /> Reponer Stock</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
