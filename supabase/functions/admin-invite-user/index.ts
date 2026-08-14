@@ -1,23 +1,21 @@
 // admin-invite-user — OPTIVISION
-// Adaptado de qa-hub: crea usuarios con roles ADMIN | VENDEDOR
-// y registra la acción en audit_log
+// Crea y resetea usuarios con roles ADMIN | VENDEDOR
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "Content-Type, Authorization, x-api-key, x-client-info, apikey",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, x-api-key, x-client-info, apikey",
 };
 
 interface InvitePayload {
-  action?: string;       // 'create' (default) | 'reset'
+  action?: string;
   email: string;
-  role?: string;         // 'VENDEDOR' (default) | 'ADMIN'
-  store_id?: string;     // Tienda asignada (para VENDEDOR)
-  user_id?: string;      // Para action=reset
-  invited_by?: string;   // Email del admin que ejecuta
+  role?: string;
+  store_id?: string;
+  user_id?: string;
+  invited_by?: string;
 }
 
 function generatePassword(): string {
@@ -27,9 +25,7 @@ function generatePassword(): string {
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
   if (req.method !== "POST") return jsonError("Method not allowed", 405);
 
   // API Key auth
@@ -74,18 +70,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const { error } = await adminClient.auth.admin.updateUserById(targetUserId!, { password: newPassword });
     if (error) return jsonError(`Password reset failed: ${error.message}`, 500);
 
-    // Audit log
     try {
       await adminClient.from("audit_log").insert({
-        user_email: invited_by ?? "admin",
-        action: "USUARIO_RESETEADO",
-        entity_type: "USER",
-        entity_id: targetUserId,
+        user_email: invited_by ?? "admin", action: "USUARIO_RESETEADO",
+        entity_type: "USER", entity_id: targetUserId,
         description: `Password reseteado para ${email}`,
       });
     } catch { /* non-fatal */ }
 
-    return jsonResponse({ success: true, action: 'reset', email, new_password: newPassword });
+    return jsonResponse({ success: true, action: 'reset', email, generated_password: newPassword });
   }
 
   // ── CREATE USER ───────────────────────────────────────────────
@@ -94,9 +87,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     let userId: string;
 
     const { data: createData, error: createError } = await adminClient.auth.admin.createUser({
-      email,
-      password: generatedPassword,
-      email_confirm: true,
+      email, password: generatedPassword, email_confirm: true,
     });
 
     if (createError) {
@@ -115,20 +106,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
       userId = createData.user.id;
     }
 
-    // Upsert profile
     const { error: profileError } = await adminClient.from("profiles").upsert(
       { id: userId, email, role: assignedRole, store_id: store_id || null },
       { onConflict: "id" }
     );
     if (profileError) throw new Error(`Profile upsert failed: ${profileError.message}`);
 
-    // Audit log
     try {
       await adminClient.from("audit_log").insert({
-        user_email: invited_by ?? "admin",
-        action: "USUARIO_CREADO",
-        entity_type: "USER",
-        entity_id: userId,
+        user_email: invited_by ?? "admin", action: "USUARIO_CREADO",
+        entity_type: "USER", entity_id: userId,
         description: `Usuario creado: ${email} con rol ${assignedRole}`,
       });
     } catch { /* non-fatal */ }
@@ -148,8 +135,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    status, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
   });
 }
 

@@ -40,12 +40,14 @@ function UserManagement() {
     if (!email.trim()) return;
     setCreateLoading(true); setCreateMsg(null);
     try {
-      const { data, error } = await supabase.functions.invoke('admin-invite-user', {
-        body: { action: 'create', email: email.trim(), role, store_id: role === 'VENDEDOR' ? storeId || null : null, invited_by: profile?.email },
-        headers: { 'x-api-key': import.meta.env.VITE_AGENT_API_KEY },
+      const res = await fetch('/api/admin-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': import.meta.env.VITE_AGENT_API_KEY },
+        body: JSON.stringify({ action: 'create', email: email.trim(), role, store_id: role === 'VENDEDOR' ? storeId || null : null, invited_by: profile?.email }),
       });
-      if (error || !data?.success) {
-        setCreateMsg({ type: 'error', text: data?.error || error?.message || 'Error al crear usuario' });
+      const data = await res.json();
+      if (!data?.success) {
+        setCreateMsg({ type: 'error', text: data?.error || 'Error al crear usuario' });
       } else {
         setCreateMsg({ type: 'ok', text: '✅ Usuario creado', password: data.generated_password });
         setEmail(''); setRole('VENDEDOR'); setStoreId('');
@@ -60,14 +62,16 @@ function UserManagement() {
   const handleResetPassword = async (userEmail: string, userId: string) => {
     setResetLoadingId(userId); setResetMsg(null);
     try {
-      const { data, error } = await supabase.functions.invoke('admin-invite-user', {
-        body: { action: 'reset', email: userEmail, invited_by: profile?.email },
-        headers: { 'x-api-key': import.meta.env.VITE_AGENT_API_KEY },
+      const res = await fetch('/api/admin-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': import.meta.env.VITE_AGENT_API_KEY },
+        body: JSON.stringify({ action: 'reset', email: userEmail, invited_by: profile?.email }),
       });
-      if (error || !data?.success) {
-        setResetMsg({ type: 'error', text: data?.error || error?.message || 'Error al resetear', userId });
+      const data = await res.json();
+      if (!data?.success) {
+        setResetMsg({ type: 'error', text: data?.error || 'Error al resetear', userId });
       } else {
-        setResetMsg({ type: 'ok', text: '✅ Password reseteado', password: data.new_password, userId });
+        setResetMsg({ type: 'ok', text: '✅ Password reseteado', password: data.generated_password, userId });
       }
     } catch (err: any) { setResetMsg({ type: 'error', text: err.message, userId }); }
     setResetLoadingId(null);
