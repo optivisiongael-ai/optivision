@@ -39,11 +39,10 @@ export default function NewSale() {
   const [newClientForm, setNewClientForm] = useState(emptyClient);
   const [searchLoading, setSearchLoading] = useState(false);
 
-  // Products
-  const [products, setProducts] = useState<{ lentes: any[]; monturas: any[]; materiales: any[]; accesorios: any[] }>({ lentes: [], monturas: [], materiales: [], accesorios: [] });
-  const [selectedLente, setSelectedLente] = useState('');
-  const [selectedMontura, setSelectedMontura] = useState('');
-  const [selectedMaterial, setSelectedMaterial] = useState('');
+  // Products — dynamic, keyed by category value
+  const [productsByCategory, setProductsByCategory] = useState<Record<string, any[]>>({});
+  const [categories, setCategories] = useState<CatalogOption[]>([]);
+  const [selectedByCategory, setSelectedByCategory] = useState<Record<string, string>>({});
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [advancePayment, setAdvancePayment] = useState(0);
   const [notes, setNotes] = useState('');
@@ -62,21 +61,22 @@ export default function NewSale() {
   useEffect(() => {
     loadProducts();
     loadStoreConfig();
-    fetchCatalogByTypes(['FRAME_TYPE', 'CRYSTAL_TYPE']).then(cat => {
+    fetchCatalogByTypes(['FRAME_TYPE', 'CRYSTAL_TYPE', 'PRODUCT_CATEGORY']).then(cat => {
       setFrameTypes(cat.FRAME_TYPE || []);
       setCrystalTypes(cat.CRYSTAL_TYPE || []);
+      setCategories(cat.PRODUCT_CATEGORY || []);
     });
   }, []);
 
   const loadProducts = async () => {
     const { data } = await supabase.from('products').select('id, name, sku_code, category, price').eq('active', true).order('name');
     const all = data || [];
-    setProducts({
-      lentes: all.filter((p: any) => p.category === 'LENTE'),
-      monturas: all.filter((p: any) => p.category === 'MONTURA'),
-      materiales: all.filter((p: any) => p.category === 'MATERIAL'),
-      accesorios: all.filter((p: any) => p.category === 'ACCESORIO'),
-    });
+    const grouped: Record<string, any[]> = {};
+    for (const p of all) {
+      if (!grouped[p.category]) grouped[p.category] = [];
+      grouped[p.category].push(p);
+    }
+    setProductsByCategory(grouped);
   };
 
   const loadStoreConfig = async () => {
@@ -120,9 +120,13 @@ export default function NewSale() {
     });
   };
 
-  useEffect(() => { if (selectedLente) { addProduct(selectedLente, products.lentes); } }, [selectedLente]);
-  useEffect(() => { if (selectedMontura) { addProduct(selectedMontura, products.monturas); } }, [selectedMontura]);
-  useEffect(() => { if (selectedMaterial) { addProduct(selectedMaterial, products.materiales); } }, [selectedMaterial]);
+  // When a product is selected from any category dropdown, add it to saleItems
+  const handleCategorySelect = (catValue: string, productId: string) => {
+    if (!productId) return;
+    const list = productsByCategory[catValue] || [];
+    addProduct(productId, list);
+    setSelectedByCategory(prev => ({ ...prev, [catValue]: '' })); // reset after adding
+  };
 
   const updateQty = (productId: string, delta: number) => {
     setSaleItems(prev => prev.map(i => {
@@ -152,7 +156,9 @@ export default function NewSale() {
   const total = subtotal;
   const balance = Math.max(0, total - advancePayment);
 
-  const CATEGORY_LABELS: Record<string, string> = { LENTE: 'Lente', MONTURA: 'Montura', MATERIAL: 'Material', ACCESORIO: 'Accesorio' };
+  // Build category label map dynamically from catalog
+  const categoryLabelMap = Object.fromEntries(categories.map(c => [c.value, c.label]));
+
 
   const handleConfirmSale = async () => {
     // Validate discounts with reasons
@@ -438,12 +444,21 @@ export default function NewSale() {
             <div className="card">
               <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>📦 Selección de Productos</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <SearchableDropdown label="Lentes" placeholder="Seleccionar lente..." options={products.lentes.map(p => ({ id: p.id, label: p.name, sublabel: p.sku_code, price: p.price }))} value={selectedLente} onChange={v => setSelectedLente(v)} />
-                <SearchableDropdown label="Monturas" placeholder="Seleccionar montura..." options={products.monturas.map(p => ({ id: p.id, label: p.name, sublabel: p.sku_code, price: p.price }))} value={selectedMontura} onChange={v => setSelectedMontura(v)} />
-                <SearchableDropdown label="Materiales" placeholder="Seleccionar material..." options={products.materiales.map(p => ({ id: p.id, label: p.name, sublabel: p.sku_code, price: p.price }))} value={selectedMaterial} onChange={v => setSelectedMaterial(v)} />
-                {products.accesorios.length > 0 && (
-                  <SearchableDropdown label="Accesorios (Opcional)" placeholder="Seleccionar accesorio..." options={products.accesorios.map(p => ({ id: p.id, label: p.name, sublabel: p.sku_code, price: p.price }))} value="" onChange={v => { if (v) addProduct(v, products.accesorios); }} />
+                {categories.length === 0 && (
+                  <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', textAlign: 'center', padding: '1rem' }}>
+                    ⚠️ Sin categorías configuradas. Ve a Productos → ⚙️ Gestionar Catálogo.
+                  </p>
                 )}
+                {categories.map(cat => (
+                  <SearchableDropdown
+                    key={cat.value}
+                    label={cat.label + 's'}
+                    placeholder={`Seleccionar ${cat.label.toLowerCase()}...`}
+                    options={(productsByCategory[cat.value] || []).map((p: any) => ({ id: p.id, label: p.name, sublabel: p.sku_code, price: p.price }))}
+                    value={selectedByCategory[cat.value] || ''}
+                    onChange={v => handleCategorySelect(cat.value, v)}
+                  />
+                ))}
               </div>
             </div>
 
@@ -461,7 +476,7 @@ export default function NewSale() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 600, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                            {CATEGORY_LABELS[item.category]} · {fmt(item.unitPrice)}
+                            {categoryLabelMap[item.category] || item.category} · {fmt(item.unitPrice)}
                             {item.discountAmount > 0 && <span style={{ color: '#f59e0b', marginLeft: 6 }}>− {fmt(item.discountAmount)}/u</span>}
                           </div>
                         </div>

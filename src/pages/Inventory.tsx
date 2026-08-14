@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
 import { RefreshCw, Edit2, AlertTriangle, Check, X, Settings2 } from 'lucide-react';
+import { fetchCatalogByTypes } from '../lib/useCatalog';
+import type { CatalogOption } from '../lib/useCatalog';
 
 export default function Inventory() {
   const { profile } = useAuth();
@@ -21,8 +23,12 @@ export default function Inventory() {
   const [alertEnabled, setAlertEnabled] = useState(false);
   const [alertThreshold, setAlertThreshold] = useState(10);
   const [alertSaving, setAlertSaving] = useState(false);
+  const [catalogCategories, setCatalogCategories] = useState<CatalogOption[]>([]);
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    loadAll();
+    fetchCatalogByTypes(['PRODUCT_CATEGORY']).then(cat => setCatalogCategories(cat.PRODUCT_CATEGORY || []));
+  }, []);
 
   const loadAll = async () => {
     setLoading(true);
@@ -112,8 +118,9 @@ export default function Inventory() {
     loadAll();
   };
 
-  const CATEGORY_LABELS: Record<string, string> = { LENTE: 'Lente', MONTURA: 'Montura', MATERIAL: 'Material', ACCESORIO: 'Accesorio' };
-  const CATEGORY_COLORS: Record<string, string> = { LENTE: 'teal', MONTURA: 'blue', MATERIAL: 'purple', ACCESORIO: 'yellow' };
+  // Dynamic catalog maps
+  const CATEGORY_LABELS = Object.fromEntries(catalogCategories.map(c => [c.value, c.label]));
+  const CATEGORY_COLORS = Object.fromEntries(catalogCategories.map(c => [c.value, c.color || 'gray']));
 
   return (
     <div>
