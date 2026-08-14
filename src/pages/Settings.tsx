@@ -292,10 +292,7 @@ function StoreManagement() {
                 <label className="label">Teléfono</label>
                 <input className="input" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+591 70000000" />
               </div>
-              <div>
-                <label className="label">Desc. máx. por ítem (Bs.)</label>
-                <input className="input" type="number" min="0" step="1" value={(form as any).maxDiscount ?? 500} onChange={e => setForm(f => ({ ...f, maxDiscount: e.target.value } as any))} placeholder="500" />
-              </div>
+
             </div>
             {msg && <div className={`alert ${msg.type === 'ok' ? 'alert-success' : 'alert-error'}`}>{msg.text}</div>}
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
