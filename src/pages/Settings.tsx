@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
 import {
-  Users, Plus, KeyRound, Copy, Check, Store,
+  Users, Plus, KeyRound, Copy, Check, Store, X,
   AlertCircle, Eye, EyeOff, Pencil
 } from 'lucide-react';
 
@@ -22,6 +22,9 @@ function UserManagement() {
   const [resetLoadingId, setResetLoadingId] = useState<string | null>(null);
   const [toggleLoadingId, setToggleLoadingId] = useState<string | null>(null);
   const [copiedReset, setCopiedReset] = useState(false);
+  const [storeAssignId, setStoreAssignId] = useState<string | null>(null);
+  const [storeAssignVal, setStoreAssignVal] = useState('');
+  const [storeAssignLoading, setStoreAssignLoading] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -38,6 +41,11 @@ function UserManagement() {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
+    // Vendedor must have a store
+    if (role === 'VENDEDOR' && !storeId) {
+      setCreateMsg({ type: 'error', text: '⚠️ Debes asignar una tienda al vendedor.' });
+      return;
+    }
     setCreateLoading(true); setCreateMsg(null);
     try {
       const res = await fetch('/api/admin-user', {
@@ -84,6 +92,15 @@ function UserManagement() {
     setToggleLoadingId(null);
   };
 
+  const handleChangeStore = async (userId: string) => {
+    setStoreAssignLoading(true);
+    await supabase.from('profiles').update({ store_id: storeAssignVal || null }).eq('id', userId);
+    setStoreAssignId(null);
+    setStoreAssignVal('');
+    fetchUsers();
+    setStoreAssignLoading(false);
+  };
+
   const copy = (text: string, type: 'create' | 'reset') => {
     navigator.clipboard.writeText(text);
     if (type === 'create') { setCopiedCreate(true); setTimeout(() => setCopiedCreate(false), 2000); }
@@ -111,15 +128,23 @@ function UserManagement() {
               <option value="ADMIN">Administrador</option>
             </select>
           </div>
-          {role === 'VENDEDOR' && stores.length > 0 && (
-            <div>
-              <label className="label" htmlFor="new-user-store">Tienda Asignada</label>
-              <select id="new-user-store" className="input" value={storeId} onChange={e => setStoreId(e.target.value)}>
-                <option value="">Sin tienda asignada</option>
-                {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
-          )}
+          {/* Store — always required for VENDEDOR */}
+          <div>
+            <label className="label" htmlFor="new-user-store">
+              Tienda Asignada {role === 'VENDEDOR' && <span style={{ color: '#ef4444' }}>*</span>}
+            </label>
+            <select
+              id="new-user-store"
+              className="input"
+              value={storeId}
+              onChange={e => setStoreId(e.target.value)}
+              required={role === 'VENDEDOR'}
+            >
+              <option value="">-- Seleccionar tienda --</option>
+              {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            {role === 'ADMIN' && <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: 4 }}>Administradores tienen acceso a todas las tiendas.</p>}
+          </div>
 
           <button type="submit" disabled={createLoading} className="btn btn-primary">
             {createLoading ? <><div className="spinner" style={{ width: 16, height: 16 }} /> Creando...</> : <><Users size={15} /> Crear Usuario</>}
@@ -181,6 +206,14 @@ function UserManagement() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <span className={`badge ${u.role === 'ADMIN' ? 'badge-teal' : 'badge-blue'}`}>{u.role}</span>
                 {!u.active && <span className="badge badge-red">Inactivo</span>}
+                {!u.stores?.name && u.role === 'VENDEDOR' && <span className="badge badge-yellow" title="Sin tienda asignada">⚠️ Sin tienda</span>}
+                <button
+                  onClick={() => { setStoreAssignId(u.id); setStoreAssignVal(u.store_id || ''); }}
+                  className="btn btn-ghost btn-sm"
+                  title="Cambiar tienda"
+                >
+                  <Store size={13} /> {u.stores?.name || 'Asignar tienda'}
+                </button>
                 <button
                   onClick={() => handleToggleActive(u.id, u.active)}
                   disabled={toggleLoadingId === u.id}
@@ -197,6 +230,24 @@ function UserManagement() {
                   {resetLoadingId === u.id ? 'Reseteando...' : 'Reset'}
                 </button>
               </div>
+              {/* Inline store selector */}
+              {storeAssignId === u.id && (
+                <div style={{ width: '100%', display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem', padding: '0.75rem', background: 'var(--color-bg-input)', borderRadius: 10, border: '1px solid var(--color-border)' }}>
+                  <select
+                    className="input input-sm"
+                    value={storeAssignVal}
+                    onChange={e => setStoreAssignVal(e.target.value)}
+                    style={{ flex: 1 }}
+                  >
+                    <option value="">-- Sin tienda --</option>
+                    {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                  <button onClick={() => handleChangeStore(u.id)} disabled={storeAssignLoading} className="btn btn-primary btn-sm">
+                    {storeAssignLoading ? '...' : <><Check size={13} /> Guardar</>}
+                  </button>
+                  <button onClick={() => setStoreAssignId(null)} className="btn btn-ghost btn-sm"><X size={13} /></button>
+                </div>
+              )}
               {resetMsg && resetMsg.userId === u.id && (
                 <div className={`alert ${resetMsg.type === 'ok' ? 'alert-success' : 'alert-error'} fade-in`} style={{ width: '100%', padding: '0.5rem 0.75rem' }}>
                   <span style={{ fontWeight: 600, fontSize: '0.8rem' }}>{resetMsg.text}</span>
