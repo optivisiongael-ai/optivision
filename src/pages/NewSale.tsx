@@ -66,7 +66,7 @@ export default function NewSale() {
       supabase.from('products').select('id, name, sku_code, category, price').eq('active', true).order('name'),
       fetchCatalogByTypes(['FRAME_TYPE', 'CRYSTAL_TYPE', 'PRODUCT_CATEGORY']),
       profile?.store_id
-        ? supabase.from('store_alert_config').select('max_discount_per_item').eq('store_id', profile.store_id).single()
+        ? supabase.from('store_alert_config').select('max_discount_per_item').eq('store_id', profile.store_id).maybeSingle()
         : Promise.resolve({ data: null, error: null }),
     ]).then(([productsRes, cat, alertRes]) => {
       // DEBUG — remove after fix
