@@ -24,6 +24,7 @@ const emptyEdit = {
 
 export default function Clients() {
   const { profile } = useAuth();
+  const isAdmin = profile?.role === 'ADMIN';
   const [search, setSearch] = useState('');
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -89,10 +90,12 @@ export default function Clients() {
     } else {
       query.limit(30);
     }
+    // Vendedores solo ven clientes de su propia tienda
+    if (!isAdmin && profile?.store_id) query.eq('store_id', profile.store_id);
     const { data } = await query;
     setClients(data || []);
     setLoading(false);
-  }, []);
+  }, [isAdmin, profile?.store_id]);
 
   useEffect(() => {
     const t = setTimeout(() => searchClients(search), 300);
@@ -103,10 +106,13 @@ export default function Clients() {
 
   const fetchClientSales = async (clientId: string) => {
     setSalesLoading(true);
-    const { data } = await supabase.from('sales')
+    let q = supabase.from('sales')
       .select('id, sale_code, total, advance_payment, balance, status, created_at, sale_items(quantity, unit_price, product:products(name))')
       .eq('client_id', clientId)
       .order('created_at', { ascending: false });
+    // Vendedores solo ven las ventas de su tienda
+    if (!isAdmin && profile?.store_id) q = q.eq('store_id', profile.store_id);
+    const { data } = await q;
     setClientSales(data || []);
     setSalesLoading(false);
   };

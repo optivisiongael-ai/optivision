@@ -199,7 +199,7 @@ export default function NewSale() {
           full_name: newClientForm.full_name.trim(),
           phone: (newClientForm as any).phone?.trim() || null,
           email: (newClientForm as any).email?.trim() || null,
-          client_code: clientCode, created_by: profile?.id,
+          client_code: clientCode, created_by: profile?.id, store_id: profile?.store_id || null,
           // Lejos
           od_sphere: (newClientForm as any).od_sphere || null,
           od_cylinder: (newClientForm as any).od_cylinder || null,

@@ -735,6 +735,7 @@ export function PendingSalesList({ clientId, sellerId, onFinalized }: {
 
   const load = async () => {
     setLoading(true);
+    const isAdmin = profile?.role === 'ADMIN';
     let q = supabase.from('sales')
       .select(`id, sale_code, status, total, advance_payment, balance, created_at,
         clients:client_id (full_name, client_code),
@@ -742,6 +743,8 @@ export function PendingSalesList({ clientId, sellerId, onFinalized }: {
       .eq('status', 'PENDING').order('created_at', { ascending: false }).limit(20);
     if (clientId) q = q.eq('client_id', clientId);
     if (sellerId) q = q.eq('seller_id', sellerId);
+    // Vendedores solo ven ventas de su tienda
+    if (!isAdmin && profile?.store_id) q = q.eq('store_id', profile.store_id);
     const { data } = await q;
     setSales(data || []);
     setLoading(false);
