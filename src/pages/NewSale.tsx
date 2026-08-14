@@ -249,8 +249,8 @@ export default function NewSale() {
 
   const resetForm = () => {
     setStep('client'); setSelectedClient(null); setIsNewClient(false);
-    setNewClientForm(emptyClient); setSaleItems([]); setSelectedLente('');
-    setSelectedMontura(''); setSelectedMaterial(''); setAdvancePayment(0);
+    setNewClientForm(emptyClient); setSaleItems([]); setSelectedByCategory({});
+    setAdvancePayment(0);
     setNotes(''); setSaleId(null); setSaleCode(null); setError(null); setCopied(false);
   };
 
