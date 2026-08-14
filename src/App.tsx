@@ -10,6 +10,7 @@ import Settings from './pages/Settings';
 import NewSale from './pages/NewSale';
 import Clients from './pages/Clients';
 import MyActivity from './pages/MyActivity';
+import SaleReceipt from './pages/SaleReceipt';
 
 // ── Protected Route (requiere sesión activa) ───────────────────
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
@@ -36,6 +37,9 @@ const AdminRoute = ({ children }: { children: ReactElement }) => {
 function AppRoutes() {
   return (
     <Routes>
+      {/* Ruta pública — sin login requerido */}
+      <Route path="/boleta/:id" element={<SaleReceipt />} />
+
       <Route path="/login" element={<Login />} />
 
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>

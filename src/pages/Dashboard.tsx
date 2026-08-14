@@ -14,6 +14,8 @@ function AdminDashboard() {
   const [stores, setStores] = useState<any[]>([]);
   const [lowStock, setLowStock] = useState<any[]>([]);
   const [recentAudit, setRecentAudit] = useState<any[]>([]);
+  const [pendingCancellations, setPendingCancellations] = useState<any[]>([]);
+  const [cancelActionId, setCancelActionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,12 +25,16 @@ function AdminDashboard() {
   const loadData = async () => {
     setLoading(true);
     // Stats
-    const [salesRes, clientsRes, productsRes, storesRes, auditRes] = await Promise.all([
-      supabase.from('sales').select('total, store_id'),
+    const [salesRes, clientsRes, productsRes, storesRes, auditRes, cancelRes] = await Promise.all([
+      supabase.from('sales').select('total, store_id').neq('status', 'CANCELLED'),
       supabase.from('clients').select('id', { count: 'exact', head: true }),
       supabase.from('products').select('id', { count: 'exact', head: true }).eq('active', true),
       supabase.from('stores').select('id, name, address, active'),
       supabase.from('audit_log').select('*').order('created_at', { ascending: false }).limit(15),
+      supabase.from('sales').select(`id, sale_code, total, cancellation_reason, cancellation_requested_at,
+        clients:client_id (full_name), profiles:seller_id (full_name, email), stores:store_id (name),
+        requester:cancellation_requested_by (full_name, email)`)
+        .eq('cancellation_status', 'PENDING').order('cancellation_requested_at', { ascending: true }),
     ]);
 
     const sales = salesRes.data || [];
@@ -40,6 +46,8 @@ function AdminDashboard() {
     });
     setStores(storesRes.data || []);
     setRecentAudit(auditRes.data || []);
+    setPendingCancellations(cancelRes.data || []);
+
 
     // Low stock with alert config
     const { data: alertConfigs } = await supabase.from('store_alert_config').select('*').eq('alerts_enabled', true);
@@ -71,6 +79,41 @@ function AdminDashboard() {
     USUARIO_CREADO: '👥 Usuario creado',
   };
 
+  const { profile } = useAuth();
+
+  const handleCancelAction = async (saleId: string, approve: boolean) => {
+    setCancelActionId(saleId);
+    if (approve) {
+      // Approve: mark CANCELLED, restore inventory
+      await supabase.from('sales').update({
+        status: 'CANCELLED',
+        cancellation_status: 'APPROVED',
+        cancellation_approved_by: profile?.id,
+        cancellation_approved_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq('id', saleId);
+      await supabase.rpc('fn_restore_inventory_on_cancel', { p_sale_id: saleId });
+      await supabase.from('audit_log').insert({
+        user_id: profile?.id, user_email: profile?.email,
+        action: 'ANULACION_APROBADA', entity_type: 'SALE', entity_id: saleId,
+        description: 'Anulación aprobada por admin. Inventario restituido.',
+      });
+    } else {
+      await supabase.from('sales').update({
+        cancellation_status: 'REJECTED',
+        cancellation_approved_by: profile?.id,
+        cancellation_approved_at: new Date().toISOString(),
+      }).eq('id', saleId);
+      await supabase.from('audit_log').insert({
+        user_id: profile?.id, user_email: profile?.email,
+        action: 'ANULACION_RECHAZADA', entity_type: 'SALE', entity_id: saleId,
+        description: 'Anulación rechazada por admin.',
+      });
+    }
+    setCancelActionId(null);
+    loadData();
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 320 }}>
@@ -81,6 +124,36 @@ function AdminDashboard() {
 
   return (
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {/* Pending cancellations alert */}
+      {pendingCancellations.length > 0 && (
+        <div className="card fade-in" style={{ border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.04)' }}>
+          <h3 style={{ fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ef4444' }}>
+            ⚠️ Solicitudes de Anulación Pendientes
+            <span style={{ background: '#ef4444', color: 'white', borderRadius: 99, padding: '0.125rem 0.5rem', fontSize: '0.75rem', fontWeight: 800 }}>{pendingCancellations.length}</span>
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {pendingCancellations.map(s => (
+              <div key={s.id} style={{ padding: '0.875rem 1rem', background: 'var(--color-bg-card)', borderRadius: 12, border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <div style={{ fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-brand-400)' }}>{s.sale_code}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
+                    Vendedor: {s.requester?.full_name || s.requester?.email || '—'} · Bs. {Number(s.total).toFixed(2)}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: '#f59e0b', marginTop: 2 }}>Motivo: {s.cancellation_reason}</div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={() => handleCancelAction(s.id, true)} disabled={cancelActionId === s.id} className="btn btn-success btn-sm">
+                    {cancelActionId === s.id ? '...' : '✅ Aprobar'}
+                  </button>
+                  <button onClick={() => handleCancelAction(s.id, false)} disabled={cancelActionId === s.id} className="btn btn-danger btn-sm">
+                    {cancelActionId === s.id ? '...' : '❌ Rechazar'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {/* Stats grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
         {[

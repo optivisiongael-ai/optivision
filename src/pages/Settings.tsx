@@ -237,12 +237,27 @@ function StoreManagement() {
     e.preventDefault();
     setSaving(true); setMsg(null);
     const payload = { name: form.name.trim(), address: form.address.trim(), phone: form.phone.trim(), active: true };
-    const { error } = editId
-      ? await supabase.from('stores').update(payload).eq('id', editId)
-      : await supabase.from('stores').insert(payload);
+    const { data: savedStore, error } = editId
+      ? await supabase.from('stores').update(payload).eq('id', editId).select().single()
+      : await supabase.from('stores').insert(payload).select().single();
     if (error) { setMsg({ type: 'error', text: error.message }); }
-    else { setMsg({ type: 'ok', text: editId ? '✅ Tienda actualizada' : '✅ Tienda creada' }); fetchStores(); setTimeout(() => { setShowForm(false); setMsg(null); }, 1200); }
+    else {
+      // Upsert store_alert_config with max discount
+      if (savedStore?.id) {
+        await supabase.from('store_alert_config').upsert({
+          store_id: savedStore.id,
+          max_discount_per_item: parseFloat((form as any).maxDiscount) || 500,
+          alerts_enabled: false, low_stock_threshold: 10,
+        }, { onConflict: 'store_id' });
+      }
+      setMsg({ type: 'ok', text: editId ? '✅ Tienda actualizada' : '✅ Tienda creada' }); fetchStores(); setTimeout(() => { setShowForm(false); setMsg(null); }, 1200);
+    }
     setSaving(false);
+  };
+
+  const toggleActive = async (storeId: string, current: boolean) => {
+    await supabase.from('stores').update({ active: !current }).eq('id', storeId);
+    fetchStores();
   };
 
   return (
@@ -260,7 +275,7 @@ function StoreManagement() {
       {showForm && (
         <div className="card fade-in" style={{ border: '1px solid var(--color-brand-700)', background: 'rgba(8,145,178,0.06)' }}>
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }}>
               <div>
                 <label className="label">Nombre *</label>
                 <input className="input" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Tienda Centro" />
@@ -272,6 +287,10 @@ function StoreManagement() {
               <div>
                 <label className="label">Teléfono</label>
                 <input className="input" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+591 70000000" />
+              </div>
+              <div>
+                <label className="label">Desc. máx. por ítem (Bs.)</label>
+                <input className="input" type="number" min="0" step="1" value={(form as any).maxDiscount ?? 500} onChange={e => setForm(f => ({ ...f, maxDiscount: e.target.value } as any))} placeholder="500" />
               </div>
             </div>
             {msg && <div className={`alert ${msg.type === 'ok' ? 'alert-success' : 'alert-error'}`}>{msg.text}</div>}
@@ -287,12 +306,17 @@ function StoreManagement() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
         {loading ? <div className="spinner" /> : stores.map(s => (
-          <div key={s.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div key={s.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', opacity: s.active ? 1 : 0.65 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div className="icon-box icon-box-teal"><Eye size={18} /></div>
               <div style={{ display: 'flex', gap: '0.375rem' }}>
-                <button onClick={() => { setForm({ name: s.name, address: s.address || '', phone: s.phone || '' }); setEditId(s.id); setShowForm(true); setMsg(null); }} className="btn btn-ghost btn-icon btn-sm">
+                <button onClick={() => { setForm({ name: s.name, address: s.address || '', phone: s.phone || '', maxDiscount: 500 } as any); setEditId(s.id); setShowForm(true); setMsg(null); }} className="btn btn-ghost btn-icon btn-sm">
                   <Pencil size={13} />
+                </button>
+                <button onClick={() => toggleActive(s.id, s.active)}
+                  className={`btn btn-sm ${s.active ? 'btn-danger' : 'btn-success'}`}
+                  style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>
+                  {s.active ? 'Desactivar' : 'Activar'}
                 </button>
               </div>
             </div>
