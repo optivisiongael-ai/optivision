@@ -4,9 +4,8 @@ import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
 import {
   ShoppingCart, Users, TrendingUp, Package, Store,
-  AlertTriangle, Activity, RefreshCw, Eye, Clock
+  AlertTriangle, Activity, RefreshCw, Eye
 } from 'lucide-react';
-import { PendingSalesList } from './Sales';
 
 const fmt = (n: number) => `Bs. ${n.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -394,39 +393,44 @@ function VendedorDashboard() {
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
-        {[
-          { icon: ShoppingCart, label: 'Mis Ventas', value: stats.mySales, color: 'teal' },
-          { icon: TrendingUp, label: 'Mis Ingresos', value: fmt(stats.myRevenue), color: 'green' },
-          { icon: Users, label: 'Mis Clientes', value: stats.myClients, color: 'blue' },
-          { icon: AlertTriangle, label: 'Saldos Pendientes', value: fmt(stats.pendingBalance), color: 'yellow' },
-        ].map(({ icon: Icon, label, value, color }) => (
-          <div key={label} className="stat-card">
-            <div className={`icon-box icon-box-${color}`}><Icon size={18} /></div>
+        <Link to="/ventas" style={{ textDecoration: 'none' }}>
+          <div className="stat-card" style={{ cursor: 'pointer', transition: 'opacity 0.15s' }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+            <div className="icon-box icon-box-teal"><ShoppingCart size={18} /></div>
             <div style={{ marginTop: '1rem' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text-primary)', letterSpacing: '-0.03em' }}>
-                {typeof value === 'number' ? value.toLocaleString('es-BO') : value}
-              </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>{label}</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text-primary)', letterSpacing: '-0.03em' }}>{stats.mySales}</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>Mis Ventas</div>
             </div>
           </div>
-        ))}
+        </Link>
+        <div className="stat-card">
+          <div className="icon-box icon-box-green"><TrendingUp size={18} /></div>
+          <div style={{ marginTop: '1rem' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text-primary)', letterSpacing: '-0.03em' }}>{fmt(stats.myRevenue)}</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>Mis Ingresos</div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="icon-box icon-box-blue"><Users size={18} /></div>
+          <div style={{ marginTop: '1rem' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text-primary)', letterSpacing: '-0.03em' }}>{stats.myClients}</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>Mis Clientes</div>
+          </div>
+        </div>
+        <Link to="/ventas?status=PENDING" style={{ textDecoration: 'none' }}>
+          <div className="stat-card" style={{ cursor: 'pointer', border: stats.pendingBalance > 0 ? '1px solid rgba(245,158,11,0.3)' : undefined, transition: 'opacity 0.15s' }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+            <div className="icon-box icon-box-yellow"><AlertTriangle size={18} /></div>
+            <div style={{ marginTop: '1rem' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: stats.pendingBalance > 0 ? '#f59e0b' : 'var(--color-text-primary)', letterSpacing: '-0.03em' }}>{fmt(stats.pendingBalance)}</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>Saldos Pendientes →</div>
+            </div>
+          </div>
+        </Link>
       </div>
 
-      {/* Pending deliveries */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid rgba(245,158,11,0.25)' }}>
-        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <Clock size={16} style={{ color: '#f59e0b' }} />
-            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--color-text-primary)' }}>Entregas Pendientes</span>
-          </div>
-          <Link to="/ventas" style={{ fontSize: '0.78rem', color: 'var(--color-brand-400)', textDecoration: 'none', fontWeight: 600 }}>
-            Ver todas →
-          </Link>
-        </div>
-        <div style={{ padding: '0.875rem 1rem' }}>
-          <PendingSalesList sellerId={profile?.id} />
-        </div>
-      </div>
 
       {/* Recent sales */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Warehouse, Settings, ShoppingCart,
-  Users, Activity, LogOut, Menu, X, ChevronRight, Moon, Sun, ClipboardList
+  Users, LogOut, Menu, X, ChevronRight, Moon, Sun, ClipboardList
 } from 'lucide-react';
 import { useAuth } from '../lib/supabase/auth';
 import { useNavGuard } from '../lib/navGuard';
@@ -35,7 +35,6 @@ export default function Layout() {
     { name: 'Nueva Venta', path: '/new-sale', icon: ShoppingCart },
     { name: 'Ventas', path: '/ventas', icon: ClipboardList },
     { name: 'Clientes', path: '/clients', icon: Users },
-    { name: 'Mi Actividad', path: '/my-activity', icon: Activity },
     { name: 'Mi Perfil', path: '/settings', icon: Settings },
   ];
 
