@@ -17,7 +17,7 @@ const emptyForm = {
 
 // ── Catalog Manager ───────────────────────────────────────────────────────────
 function CatalogSection({
-  title, color, options, onAdd, onRemove, onEdit,
+  title, color: _color, options, onAdd, onRemove, onEdit,
 }: {
   title: string; color: string;
   options: CatalogOption[];
