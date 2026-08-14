@@ -59,31 +59,34 @@ export default function NewSale() {
   const [crystalTypes, setCrystalTypes] = useState<CatalogOption[]>([]);
 
   useEffect(() => {
-    loadProducts();
-    loadStoreConfig();
-    fetchCatalogByTypes(['FRAME_TYPE', 'CRYSTAL_TYPE', 'PRODUCT_CATEGORY']).then(cat => {
+    // Load everything in parallel, set all state together to avoid race condition
+    Promise.all([
+      supabase.from('products').select('id, name, sku_code, category, price').eq('active', true).order('name'),
+      fetchCatalogByTypes(['FRAME_TYPE', 'CRYSTAL_TYPE', 'PRODUCT_CATEGORY']),
+      profile?.store_id
+        ? supabase.from('store_alert_config').select('max_discount_per_item').eq('store_id', profile.store_id).single()
+        : Promise.resolve({ data: null, error: null }),
+    ]).then(([productsRes, cat, alertRes]) => {
+      // Products grouped by category
+      const all = productsRes.data || [];
+      const grouped: Record<string, any[]> = {};
+      for (const p of all) {
+        if (!grouped[p.category]) grouped[p.category] = [];
+        grouped[p.category].push(p);
+      }
+      setProductsByCategory(grouped);
+
+      // Catalog
       setFrameTypes(cat.FRAME_TYPE || []);
       setCrystalTypes(cat.CRYSTAL_TYPE || []);
       setCategories(cat.PRODUCT_CATEGORY || []);
+
+      // Store config
+      if (alertRes.data?.max_discount_per_item != null) {
+        setMaxDiscount(alertRes.data.max_discount_per_item);
+      }
     });
-  }, []);
-
-  const loadProducts = async () => {
-    const { data } = await supabase.from('products').select('id, name, sku_code, category, price').eq('active', true).order('name');
-    const all = data || [];
-    const grouped: Record<string, any[]> = {};
-    for (const p of all) {
-      if (!grouped[p.category]) grouped[p.category] = [];
-      grouped[p.category].push(p);
-    }
-    setProductsByCategory(grouped);
-  };
-
-  const loadStoreConfig = async () => {
-    if (!profile?.store_id) return;
-    const { data } = await supabase.from('store_alert_config').select('max_discount_per_item').eq('store_id', profile.store_id).single();
-    if (data?.max_discount_per_item != null) setMaxDiscount(data.max_discount_per_item);
-  };
+  }, [profile?.store_id]);
 
   const searchClients = useCallback(async (q: string) => {
     if (!q.trim()) { setSearchResults([]); return; }
