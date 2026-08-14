@@ -33,13 +33,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // Verify caller has a valid Supabase session
-  const authHeader = req.headers['authorization'] || '';
-  const token = authHeader.replace('Bearer ', '').trim();
-  if (!token) { res.status(401).json({ success: false, error: 'Missing authorization token' }); return; }
-
-  const { data: { user: caller }, error: authErr } = await admin.auth.getUser(token);
-  if (authErr || !caller) { res.status(401).json({ success: false, error: 'Invalid or expired token' }); return; }
+  // Verify API key
+  const apiKey = req.headers['x-api-key'];
+  const expectedKey = process.env.AGENT_API_KEY || '';
+  if (!expectedKey || apiKey !== expectedKey) {
+    res.status(401).json({ success: false, error: 'Unauthorized' }); return;
+  }
 
   const { action = 'create', email, role: rawRole, store_id, user_id, invited_by } = req.body;
   const assignedRole = ['ADMIN', 'VENDEDOR'].includes(rawRole) ? rawRole : 'VENDEDOR';
