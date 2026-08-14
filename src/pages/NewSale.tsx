@@ -69,6 +69,10 @@ export default function NewSale() {
         ? supabase.from('store_alert_config').select('max_discount_per_item').eq('store_id', profile.store_id).single()
         : Promise.resolve({ data: null, error: null }),
     ]).then(([productsRes, cat, alertRes]) => {
+      // DEBUG — remove after fix
+      console.log('[NewSale] products query result:', productsRes.data, 'error:', productsRes.error);
+      console.log('[NewSale] catalog PRODUCT_CATEGORY:', cat.PRODUCT_CATEGORY);
+
       // Products grouped by category
       const all = productsRes.data || [];
       const grouped: Record<string, any[]> = {};
@@ -76,6 +80,7 @@ export default function NewSale() {
         if (!grouped[p.category]) grouped[p.category] = [];
         grouped[p.category].push(p);
       }
+      console.log('[NewSale] grouped:', grouped);
       setProductsByCategory(grouped);
 
       // Catalog
