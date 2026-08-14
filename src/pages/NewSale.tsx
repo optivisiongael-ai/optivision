@@ -19,6 +19,7 @@ type SaleItem = {
   category: string;
   quantity: number;
   unitPrice: number;
+  itemMaxDiscount: number; // from product.max_discount
   discountAmount: number;
   discountReason: string;
   subtotal: number; // (unitPrice - discountAmount) * quantity
@@ -48,7 +49,6 @@ export default function NewSale() {
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [advancePayment, setAdvancePayment] = useState(0);
   const [notes, setNotes] = useState('');
-  const [maxDiscount, setMaxDiscount] = useState(500); // from store config
 
   // Result
   const [saleId, setSaleId] = useState<string | null>(null);
@@ -61,39 +61,22 @@ export default function NewSale() {
   const [crystalTypes, setCrystalTypes] = useState<CatalogOption[]>([]);
 
   useEffect(() => {
-    // Load everything in parallel, set all state together to avoid race condition
     Promise.all([
-      supabase.from('products').select('id, name, sku_code, category, price').eq('active', true).order('name'),
+      supabase.from('products').select('id, name, sku_code, category, price, max_discount').eq('active', true).order('name'),
       fetchCatalogByTypes(['FRAME_TYPE', 'CRYSTAL_TYPE', 'PRODUCT_CATEGORY']),
-      profile?.store_id
-        ? supabase.from('store_alert_config').select('max_discount_per_item').eq('store_id', profile.store_id).maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-    ]).then(([productsRes, cat, alertRes]) => {
-      // DEBUG — remove after fix
-      console.log('[NewSale] products query result:', productsRes.data, 'error:', productsRes.error);
-      console.log('[NewSale] catalog PRODUCT_CATEGORY:', cat.PRODUCT_CATEGORY);
-
-      // Products grouped by category
+    ]).then(([productsRes, cat]) => {
       const all = productsRes.data || [];
       const grouped: Record<string, any[]> = {};
       for (const p of all) {
         if (!grouped[p.category]) grouped[p.category] = [];
         grouped[p.category].push(p);
       }
-      console.log('[NewSale] grouped:', grouped);
       setProductsByCategory(grouped);
-
-      // Catalog
       setFrameTypes(cat.FRAME_TYPE || []);
       setCrystalTypes(cat.CRYSTAL_TYPE || []);
       setCategories(cat.PRODUCT_CATEGORY || []);
-
-      // Store config
-      if (alertRes.data?.max_discount_per_item != null) {
-        setMaxDiscount(alertRes.data.max_discount_per_item);
-      }
     });
-  }, [profile?.id]);  // wait for auth profile before fetching
+  }, [profile?.id]);
 
   const { setGuard } = useNavGuard();
 
@@ -147,7 +130,7 @@ export default function NewSale() {
           ? { ...i, quantity: i.quantity + 1, subtotal: (i.quantity + 1) * (i.unitPrice - i.discountAmount) }
           : i);
       }
-      return [...prev, { productId: prod.id, name: prod.name, category: prod.category, quantity: 1, unitPrice: prod.price, discountAmount: 0, discountReason: '', subtotal: prod.price }];
+      return [...prev, { productId: prod.id, name: prod.name, category: prod.category, quantity: 1, unitPrice: prod.price, itemMaxDiscount: prod.max_discount ?? 0, discountAmount: 0, discountReason: '', subtotal: prod.price }];
     });
   };
 
@@ -170,7 +153,8 @@ export default function NewSale() {
   const updateItemDiscount = (productId: string, val: number) => {
     setSaleItems(prev => prev.map(i => {
       if (i.productId !== productId) return i;
-      const disc = Math.min(Math.max(0, val), maxDiscount, i.unitPrice);
+      const cap = i.itemMaxDiscount > 0 ? Math.min(i.itemMaxDiscount, i.unitPrice) : i.unitPrice;
+      const disc = Math.min(Math.max(0, val), cap);
       return { ...i, discountAmount: disc, subtotal: i.quantity * (i.unitPrice - disc) };
     }));
   };
@@ -530,13 +514,13 @@ export default function NewSale() {
                         <div style={{ position: 'relative', flex: '0 0 110px' }}>
                           <span style={{ position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.75rem', color: 'var(--color-text-muted)', pointerEvents: 'none' }}>Bs.</span>
                           <input
-                            type="number" min="0" max={maxDiscount} step="0.01"
+                            type="number" min="0" max={item.itemMaxDiscount > 0 ? item.itemMaxDiscount : undefined} step="0.01"
                             value={item.discountAmount || ''}
                             onChange={e => updateItemDiscount(item.productId, parseFloat(e.target.value) || 0)}
                             placeholder="0.00"
                             className="input input-sm"
                             style={{ paddingLeft: '2rem' }}
-                            title={`Máx. ${fmt(maxDiscount)} por ítem`}
+                            title={item.itemMaxDiscount > 0 ? `Máx. ${fmt(item.itemMaxDiscount)} por ítem` : 'Sin límite de descuento configurado'}
                           />
                         </div>
                         {item.discountAmount > 0 && (
@@ -550,7 +534,7 @@ export default function NewSale() {
                             {DISCOUNT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
                           </select>
                         )}
-                        {item.discountAmount === 0 && <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Descuento opcional (máx. {fmt(maxDiscount)})</span>}
+                        {item.discountAmount === 0 && <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Descuento opcional{item.itemMaxDiscount > 0 ? ` (máx. ${fmt(item.itemMaxDiscount)})` : ''}</span>}
                       </div>
                     </div>
                   ))}
