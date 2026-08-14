@@ -89,8 +89,9 @@ export default function NewSale() {
 
   const handlePrintBoleta = useCallback(() => {
     if (!saleId) return;
-    window.open(boletalink, '_blank');
-  }, [saleId, boletalink]);
+    const url = `${APP_URL}#/boleta/${saleId}`;
+    window.open(url, '_blank');
+  }, [saleId]);
 
   // Register/clear nav guard when sale is in progress
   useEffect(() => {
