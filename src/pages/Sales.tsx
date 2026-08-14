@@ -74,19 +74,22 @@ export default function Sales() {
   const loadPending = async (sf: string) => {
     setPendingLoading(true);
     setPendingError(null);
-    // NOTE: only columns guaranteed in init migration (no delivery_date, no discount_amount)
     let q = supabase.from('sales')
       .select(`
         id, sale_code, status, seller_id,
         subtotal, discount, total, advance_payment, balance,
         notes, created_at,
         clients:client_id (full_name, client_code, phone),
+        stores:store_id (name),
+        profiles:seller_id (full_name),
         sale_items (quantity, unit_price, subtotal,
           products:product_id (name, category))
       `)
       .order('created_at', { ascending: false })
       .limit(200);
     if (sf !== 'ALL') q = q.eq('status', sf);
+    // Vendedores solo ven ventas de su propia tienda
+    if (!isAdmin && profile?.store_id) q = q.eq('store_id', profile.store_id);
     const { data, error } = await q;
     if (error) {
       const msg = `Error: ${error.message} | ${error.details || ''} | hint: ${error.hint || ''}`;
@@ -96,7 +99,6 @@ export default function Sales() {
       setPendingLoading(false);
       return;
     }
-    console.log('loadPending OK — rows:', data?.length, data?.[0]);
     setPendingSales(data || []);
     setPendingLoading(false);
   };
@@ -430,6 +432,8 @@ export default function Sales() {
                           <div style={{ display: 'flex', gap: '1rem', fontSize: '0.78rem', color: 'var(--color-text-muted)', flexWrap: 'wrap' }}>
                             <span style={{ fontFamily: 'monospace', color: 'var(--color-brand-400)' }}>{sale.sale_code}</span>
                             <span>{fmtDate(sale.created_at)}</span>
+                            {sale.stores?.name && <span>🏪 {sale.stores.name}</span>}
+                            {isAdmin && sale.profiles?.full_name && <span>👤 {sale.profiles.full_name}</span>}
                           </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
