@@ -16,6 +16,13 @@ export default function SaleReceipt() {
     loadSale();
   }, [id]);
 
+  // Auto-print when opened from the sale success screen
+  useEffect(() => {
+    if (sale && window.opener) {
+      setTimeout(() => window.print(), 400);
+    }
+  }, [sale]);
+
   const loadSale = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -58,13 +65,30 @@ export default function SaleReceipt() {
   const CANCELLED = sale.status === 'CANCELLED';
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f1f5f9', padding: '1.5rem', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="receipt-outer" style={{ minHeight: '100vh', background: '#f1f5f9', padding: '1.5rem', fontFamily: "'Inter', system-ui, sans-serif" }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @media print {
+          /* ── Impresora térmica 80mm — estándar ── */
+          @page {
+            size: 80mm auto;
+            margin: 3mm 3mm 3mm 3mm;
+          }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          body { background: white !important; margin: 0; padding: 0; }
           .no-print { display: none !important; }
-          body { background: white; }
-          .receipt-wrapper { box-shadow: none !important; }
+          .receipt-outer { background: white !important; min-height: unset !important; padding: 0 !important; }
+          .receipt-wrapper { width: 100% !important; max-width: 100% !important; }
+          .receipt-card {
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            margin-bottom: 4px !important;
+            padding: 8px 6px !important;
+            border: none !important;
+          }
+          img { max-height: 50px !important; }
+          h1, h2, h3 { font-size: 11pt !important; }
+          p, div, span, td, th { font-size: 8pt !important; line-height: 1.3 !important; }
         }
       `}</style>
       {/* Print button — hidden when printing */}
@@ -78,7 +102,7 @@ export default function SaleReceipt() {
       </div>
       <div style={{ maxWidth: 480, margin: '0 auto' }} className="receipt-wrapper">
         {/* Header */}
-        <div style={{ background: 'white', borderRadius: 20, padding: '2rem', marginBottom: '1rem', boxShadow: '0 4px 24px rgba(0,0,0,0.08)', textAlign: 'center' }}>
+        <div className="receipt-card" style={{ background: 'white', borderRadius: 20, padding: '2rem', marginBottom: '1rem', boxShadow: '0 4px 24px rgba(0,0,0,0.08)', textAlign: 'center' }}>
           <img
             src={sale.stores?.logo_url || '/logo.png'}
             alt={sale.stores?.name || 'OPTIVISION'}

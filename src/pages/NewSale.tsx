@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNavGuard } from '../lib/navGuard';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
@@ -79,6 +80,17 @@ export default function NewSale() {
   }, [profile?.id]);
 
   const { setGuard } = useNavGuard();
+  const navigate = useNavigate();
+
+  const handleFinalizar = useCallback(() => {
+    setGuard(null);
+    navigate('/ventas');
+  }, [setGuard, navigate]);
+
+  const handlePrintBoleta = useCallback(() => {
+    if (!saleId) return;
+    window.open(boletalink, '_blank');
+  }, [saleId, boletalink]);
 
   // Register/clear nav guard when sale is in progress
   useEffect(() => {
@@ -635,9 +647,17 @@ export default function NewSale() {
 
           {/* Actions */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-            <button onClick={resetForm} className="btn btn-primary btn-lg" style={{ width: '100%' }}>
-              <ShoppingCart size={18} /> Nueva Venta
+            <button onClick={handlePrintBoleta} className="btn btn-secondary btn-lg" style={{ width: '100%' }}>
+              🖨️ Imprimir Boleta
             </button>
+            <div style={{ display: 'flex', gap: '0.625rem' }}>
+              <button onClick={resetForm} className="btn btn-primary btn-lg" style={{ flex: 1 }}>
+                <ShoppingCart size={18} /> Nueva Venta
+              </button>
+              <button onClick={handleFinalizar} className="btn btn-secondary btn-lg" style={{ flex: 1 }}>
+                ✓ Finalizar
+              </button>
+            </div>
           </div>
         </div>
       )}
