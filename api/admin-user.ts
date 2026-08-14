@@ -33,17 +33,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // Verify caller is authenticated and is ADMIN
+  // Verify caller has a valid Supabase session
   const authHeader = req.headers['authorization'] || '';
   const token = authHeader.replace('Bearer ', '').trim();
   if (!token) { res.status(401).json({ success: false, error: 'Missing authorization token' }); return; }
 
   const { data: { user: caller }, error: authErr } = await admin.auth.getUser(token);
   if (authErr || !caller) { res.status(401).json({ success: false, error: 'Invalid or expired token' }); return; }
-
-  // Check ADMIN role
-  const { data: callerProfile } = await admin.from('profiles').select('role').eq('id', caller.id).single();
-  if (callerProfile?.role !== 'ADMIN') { res.status(403).json({ success: false, error: 'Forbidden: ADMIN role required' }); return; }
 
   const { action = 'create', email, role: rawRole, store_id, user_id, invited_by } = req.body;
   const assignedRole = ['ADMIN', 'VENDEDOR'].includes(rawRole) ? rawRole : 'VENDEDOR';
