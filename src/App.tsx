@@ -49,7 +49,7 @@ function AppRoutes() {
         {/* Rutas ADMIN */}
         <Route path="products" element={<AdminRoute><Products /></AdminRoute>} />
         <Route path="inventory" element={<AdminRoute><Inventory /></AdminRoute>} />
-        <Route path="settings" element={<AdminRoute><Settings /></AdminRoute>} />
+        <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
         {/* Rutas VENDEDOR */}
         <Route path="new-sale" element={<NewSale />} />

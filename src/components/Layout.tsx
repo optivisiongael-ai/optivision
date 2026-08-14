@@ -32,6 +32,7 @@ export default function Layout() {
     { name: 'Nueva Venta', path: '/new-sale', icon: ShoppingCart },
     { name: 'Clientes', path: '/clients', icon: Users },
     { name: 'Mi Actividad', path: '/my-activity', icon: Activity },
+    { name: 'Mi Perfil', path: '/settings', icon: Settings },
   ];
 
   const navItems = isAdmin ? adminNav : vendedorNav;

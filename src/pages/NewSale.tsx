@@ -154,16 +154,37 @@ export default function NewSale() {
       if (isNewClient) {
         const clientCode = `OPT-${Date.now().toString().slice(-5)}`;
         const { data: newClient, error: ce } = await supabase.from('clients').insert({
-          ...newClientForm,
           full_name: newClientForm.full_name.trim(),
-          phone: newClientForm.phone.trim() || null,
-          email: newClientForm.email.trim() || null,
+          phone: (newClientForm as any).phone?.trim() || null,
+          email: (newClientForm as any).email?.trim() || null,
           client_code: clientCode, created_by: profile?.id,
-          od_sphere: newClientForm.od_sphere || null, od_cylinder: newClientForm.od_cylinder || null,
-          od_axis: newClientForm.od_axis || null, od_add: newClientForm.od_add || null,
-          oi_sphere: newClientForm.oi_sphere || null, oi_cylinder: newClientForm.oi_cylinder || null,
-          oi_axis: newClientForm.oi_axis || null, oi_add: newClientForm.oi_add || null,
-          dip: newClientForm.dip || null,
+          // Lejos
+          od_sphere: (newClientForm as any).od_sphere || null,
+          od_cylinder: (newClientForm as any).od_cylinder || null,
+          od_axis: (newClientForm as any).od_axis || null,
+          od_add: (newClientForm as any).od_add || null,
+          oi_sphere: (newClientForm as any).oi_sphere || null,
+          oi_cylinder: (newClientForm as any).oi_cylinder || null,
+          oi_axis: (newClientForm as any).oi_axis || null,
+          oi_add: (newClientForm as any).oi_add || null,
+          dip: (newClientForm as any).dip || null,
+          dip_far: (newClientForm as any).dip_far || null,
+          // Cerca
+          od_sphere_near: (newClientForm as any).od_sphere_near || null,
+          od_cyl_near: (newClientForm as any).od_cyl_near || null,
+          od_axis_near: (newClientForm as any).od_axis_near || null,
+          od_dip_near: (newClientForm as any).od_dip_near || null,
+          oi_sphere_near: (newClientForm as any).oi_sphere_near || null,
+          oi_cyl_near: (newClientForm as any).oi_cyl_near || null,
+          oi_axis_near: (newClientForm as any).oi_axis_near || null,
+          add_near: (newClientForm as any).add_near || null,
+          // Extras
+          frame_type: (newClientForm as any).frame_type || null,
+          crystal_type: (newClientForm as any).crystal_type || null,
+          age: (newClientForm as any).age || null,
+          delivery_date: (newClientForm as any).delivery_date || null,
+          delivery_time: (newClientForm as any).delivery_time || null,
+          notes: (newClientForm as any).notes || null,
         }).select().single();
         if (ce) throw new Error(ce.message);
         clientId = newClient.id;
@@ -316,19 +337,76 @@ export default function NewSale() {
                   <div><label className="label">Email</label><input className="input" type="email" value={newClientForm.email} onChange={e => setNewClientForm(f => ({ ...f, email: e.target.value }))} placeholder="cliente@email.com" /></div>
                 </div>
                 <div>
-                  <p className="section-title" style={{ marginBottom: '0.875rem' }}>🔭 Medidas de Lentes (Opcional)</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.75rem' }}>
-                    {[
-                      { key: 'od_sphere', label: 'OD Esfera' }, { key: 'od_cylinder', label: 'OD Cilindro' },
-                      { key: 'od_axis', label: 'OD Eje' }, { key: 'od_add', label: 'OD Add' },
-                      { key: 'oi_sphere', label: 'OI Esfera' }, { key: 'oi_cylinder', label: 'OI Cilindro' },
-                      { key: 'oi_axis', label: 'OI Eje' }, { key: 'oi_add', label: 'OI Add' },
-                      { key: 'dip', label: 'DIP' },
-                    ].map(({ key, label }) => (
-                      <div key={key}><label className="label">{label}</label><input className="input input-sm" value={(newClientForm as any)[key]} onChange={e => setNewClientForm(f => ({ ...f, [key]: e.target.value }))} placeholder="0.00" /></div>
+                  <p className="section-title" style={{ marginBottom: '0.875rem' }}>🔭 Medidas Ópticas (Opcional)</p>
+
+                  {/* Info básica del paciente */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+                    <div><label className="label">Edad</label><input className="input input-sm" value={(newClientForm as any).age || ''} onChange={e => setNewClientForm(f => ({ ...f, age: e.target.value }))} placeholder="Ej: 35" /></div>
+                    <div><label className="label">Armación</label>
+                      <select className="input input-sm" value={(newClientForm as any).frame_type || ''} onChange={e => setNewClientForm(f => ({ ...f, frame_type: e.target.value }))}>
+                        <option value="">-- Seleccionar --</option>
+                        {['Metal', 'Acetato', 'Nylon', 'TR90', 'Madera', 'Titanio', 'Otra'].map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div><label className="label">Tipo de Cristal</label>
+                      <select className="input input-sm" value={(newClientForm as any).crystal_type || ''} onChange={e => setNewClientForm(f => ({ ...f, crystal_type: e.target.value }))}>
+                        <option value="">-- Seleccionar --</option>
+                        {['Orgánico', 'Foto Blue (Grey)', 'Foto Blue (Brown)', 'Fotocromático', 'CR-39', 'Policarbonato', 'Hi-Index 1.67', 'Hi-Index 1.74', 'Mineral'].map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div><label className="label">Entrega</label><input className="input input-sm" type="date" value={(newClientForm as any).delivery_date || ''} onChange={e => setNewClientForm(f => ({ ...f, delivery_date: e.target.value }))} /></div>
+                    <div><label className="label">Hora Entrega</label><input className="input input-sm" type="time" value={(newClientForm as any).delivery_time || ''} onChange={e => setNewClientForm(f => ({ ...f, delivery_time: e.target.value }))} /></div>
+                  </div>
+
+                  {/* LEJOS */}
+                  <div style={{ background: 'var(--color-bg-input)', borderRadius: 10, padding: '0.875rem', marginBottom: '0.75rem', border: '1px solid var(--color-border)' }}>
+                    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-brand-400)', marginBottom: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📏 Lejos</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr 1fr 1fr', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)' }}></span>
+                      {['Esfera', 'Cilindro', 'Eje', 'DIP'].map(h => <span key={h} style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', textAlign: 'center' }}>{h}</span>)}
+                    </div>
+                    {[['O.D.', 'od_sphere', 'od_cylinder', 'od_axis', 'dip_far'], ['O.I.', 'oi_sphere', 'oi_cylinder', 'oi_axis', '']].map(([label, s, c, a, d]) => (
+                      <div key={label} style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr 1fr 1fr', gap: '0.5rem', alignItems: 'center', marginBottom: '0.375rem' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{label}</span>
+                        <input className="input input-sm" value={(newClientForm as any)[s] || ''} onChange={e => setNewClientForm(f => ({ ...f, [s]: e.target.value }))} placeholder="+0.00" style={{ textAlign: 'center' }} />
+                        <input className="input input-sm" value={(newClientForm as any)[c] || ''} onChange={e => setNewClientForm(f => ({ ...f, [c]: e.target.value }))} placeholder="+0.00" style={{ textAlign: 'center' }} />
+                        <input className="input input-sm" value={(newClientForm as any)[a] || ''} onChange={e => setNewClientForm(f => ({ ...f, [a]: e.target.value }))} placeholder="0°" style={{ textAlign: 'center' }} />
+                        {d ? <input className="input input-sm" value={(newClientForm as any)[d] || ''} onChange={e => setNewClientForm(f => ({ ...f, [d]: e.target.value }))} placeholder="0" style={{ textAlign: 'center' }} /> : <span />}
+                      </div>
                     ))}
                   </div>
+
+                  {/* CERCA */}
+                  <div style={{ background: 'var(--color-bg-input)', borderRadius: 10, padding: '0.875rem', marginBottom: '0.75rem', border: '1px solid var(--color-border)' }}>
+                    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#a78bfa', marginBottom: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🔍 Cerca</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr 1fr 1fr', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span />
+                      {['Esfera', 'Cilindro', 'Eje', 'DIP'].map(h => <span key={h} style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', textAlign: 'center' }}>{h}</span>)}
+                    </div>
+                    {[['O.D.', 'od_sphere_near', 'od_cyl_near', 'od_axis_near', 'od_dip_near'], ['O.I.', 'oi_sphere_near', 'oi_cyl_near', 'oi_axis_near', '']].map(([label, s, c, a, d]) => (
+                      <div key={label} style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr 1fr 1fr', gap: '0.5rem', alignItems: 'center', marginBottom: '0.375rem' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>{label}</span>
+                        <input className="input input-sm" value={(newClientForm as any)[s] || ''} onChange={e => setNewClientForm(f => ({ ...f, [s]: e.target.value }))} placeholder="+0.00" style={{ textAlign: 'center' }} />
+                        <input className="input input-sm" value={(newClientForm as any)[c] || ''} onChange={e => setNewClientForm(f => ({ ...f, [c]: e.target.value }))} placeholder="+0.00" style={{ textAlign: 'center' }} />
+                        <input className="input input-sm" value={(newClientForm as any)[a] || ''} onChange={e => setNewClientForm(f => ({ ...f, [a]: e.target.value }))} placeholder="0°" style={{ textAlign: 'center' }} />
+                        {d ? <input className="input input-sm" value={(newClientForm as any)[d] || ''} onChange={e => setNewClientForm(f => ({ ...f, [d]: e.target.value }))} placeholder="0" style={{ textAlign: 'center' }} /> : <span />}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* ADD+ y Observaciones */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.75rem' }}>
+                    <div>
+                      <label className="label">ADD+ (Adición)</label>
+                      <input className="input input-sm" value={(newClientForm as any).add_near || ''} onChange={e => setNewClientForm(f => ({ ...f, add_near: e.target.value }))} placeholder="+1.50" />
+                    </div>
+                    <div>
+                      <label className="label">Observaciones</label>
+                      <input className="input input-sm" value={(newClientForm as any).notes || ''} onChange={e => setNewClientForm(f => ({ ...f, notes: e.target.value }))} placeholder="Recomendaciones, alergias, notas..." />
+                    </div>
+                  </div>
                 </div>
+
               </div>
             </div>
           )}

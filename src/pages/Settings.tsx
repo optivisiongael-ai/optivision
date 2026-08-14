@@ -394,20 +394,23 @@ function ProfileSection() {
 type Tab = 'users' | 'stores' | 'profile';
 
 export default function Settings() {
-  const [tab, setTab] = useState<Tab>('users');
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'ADMIN';
+  const [tab, setTab] = useState<Tab>(isAdmin ? 'users' : 'profile');
 
-  const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: 'users', label: 'Usuarios', icon: '👥' },
-    { id: 'stores', label: 'Tiendas', icon: '🏪' },
+  const allTabs: { id: Tab; label: string; icon: string; adminOnly?: boolean }[] = [
+    { id: 'users', label: 'Usuarios', icon: '👥', adminOnly: true },
+    { id: 'stores', label: 'Tiendas', icon: '🏪', adminOnly: true },
     { id: 'profile', label: 'Mi Perfil', icon: '👤' },
   ];
+  const tabs = allTabs.filter(t => !t.adminOnly || isAdmin);
 
   return (
     <div>
       <div className="page-header">
         <div>
           <h1 className="page-title">⚙️ Configuración</h1>
-          <p className="page-subtitle">Gestiona usuarios, tiendas y configuración del sistema</p>
+          <p className="page-subtitle">{isAdmin ? 'Gestiona usuarios, tiendas y configuración del sistema' : 'Gestiona tu perfil y contraseña'}</p>
         </div>
       </div>
 
@@ -432,8 +435,8 @@ export default function Settings() {
       </div>
 
       <div className="fade-in" key={tab}>
-        {tab === 'users' && <UserManagement />}
-        {tab === 'stores' && <StoreManagement />}
+        {tab === 'users' && isAdmin && <UserManagement />}
+        {tab === 'stores' && isAdmin && <StoreManagement />}
         {tab === 'profile' && <ProfileSection />}
       </div>
     </div>

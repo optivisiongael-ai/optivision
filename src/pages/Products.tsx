@@ -14,7 +14,7 @@ const CATEGORIES: { value: Category; label: string; color: string }[] = [
 
 const fmt = (n: number) => `Bs. ${n.toLocaleString('es-BO', { minimumFractionDigits: 2 })}`;
 
-const emptyForm = { sku_code: '', name: '', description: '', category: 'LENTE' as Category, price: '' };
+const emptyForm = { sku_code: '', name: '', description: '', category: 'LENTE' as Category, price: '', initial_stock: '0', min_stock_alert: '5', max_discount: '0' };
 
 export default function Products() {
   const { profile } = useAuth();
@@ -47,7 +47,7 @@ export default function Products() {
 
   const openCreate = () => { setForm(emptyForm); setEditId(null); setShowForm(true); setMsg(null); };
   const openEdit = (p: any) => {
-    setForm({ sku_code: p.sku_code, name: p.name, description: p.description || '', category: p.category, price: String(p.price) });
+    setForm({ sku_code: p.sku_code, name: p.name, description: p.description || '', category: p.category, price: String(p.price), initial_stock: '0', min_stock_alert: String(p.min_stock_alert ?? 5), max_discount: String(p.max_discount ?? 0) });
     setEditId(p.id); setShowForm(true); setMsg(null);
   };
 
@@ -60,6 +60,8 @@ export default function Products() {
       description: form.description.trim() || null,
       category: form.category,
       price: parseFloat(form.price) || 0,
+      max_discount: parseFloat(form.max_discount) || 0,
+      min_stock_alert: parseInt(form.min_stock_alert) || 5,
       active: true,
     };
 
@@ -78,10 +80,21 @@ export default function Products() {
       const res = await supabase.from('products').insert(payload).select().single();
       error = res.error;
       if (!error && res.data) {
+        // Set initial inventory for all stores if initial_stock > 0
+        const initialQty = parseInt(form.initial_stock) || 0;
+        if (initialQty > 0) {
+          const { data: stores } = await supabase.from('stores').select('id');
+          if (stores && stores.length > 0) {
+            await supabase.from('inventory').upsert(
+              stores.map((s: any) => ({ product_id: res.data.id, store_id: s.id, quantity: initialQty })),
+              { onConflict: 'product_id,store_id' }
+            );
+          }
+        }
         await supabase.from('audit_log').insert({
           user_id: profile?.id, user_email: profile?.email,
           action: 'SKU_CREADO', entity_type: 'PRODUCT', entity_id: res.data.id,
-          description: `Creado: ${payload.name} (${payload.sku_code})`,
+          description: `Creado: ${payload.name} (${payload.sku_code}) stock inicial: ${form.initial_stock}`,
         });
       }
     }
@@ -166,6 +179,21 @@ export default function Products() {
               <div>
                 <label className="label" htmlFor="sku-price">Precio (Bs.) *</label>
                 <input id="sku-price" className="input" required type="number" min="0" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00" />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label className="label" htmlFor="sku-initial-stock">Stock Inicial</label>
+                  <input id="sku-initial-stock" className="input" type="number" min="0" step="1" value={form.initial_stock} onChange={e => setForm(f => ({ ...f, initial_stock: e.target.value }))} placeholder="0" disabled={!!editId} title={editId ? 'El stock se gestiona en Inventario' : ''} style={{ opacity: editId ? 0.5 : 1 }} />
+                  {editId && <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Gestionar en Inventario</span>}
+                </div>
+                <div>
+                  <label className="label" htmlFor="sku-min-alert">Alerta Stock Mínimo</label>
+                  <input id="sku-min-alert" className="input" type="number" min="1" step="1" value={form.min_stock_alert} onChange={e => setForm(f => ({ ...f, min_stock_alert: e.target.value }))} placeholder="5" />
+                </div>
+                <div>
+                  <label className="label" htmlFor="sku-max-disc">Descuento Máx. (Bs.)</label>
+                  <input id="sku-max-disc" className="input" type="number" min="0" step="0.01" value={form.max_discount} onChange={e => setForm(f => ({ ...f, max_discount: e.target.value }))} placeholder="0.00" />
+                </div>
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
                 <button type="button" onClick={() => setShowForm(false)} className="btn btn-secondary">Cancelar</button>
