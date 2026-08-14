@@ -1,7 +1,9 @@
 // Vercel Serverless Function — crea/resetea usuarios de OPTIVISION
-// Requiere env vars en Vercel: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, AGENT_API_KEY
+// Auth: verifica JWT de Supabase + rol ADMIN
+// Requiere en Vercel env vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { createClient } from '@supabase/supabase-js';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 function generatePassword(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
@@ -12,20 +14,14 @@ function generatePassword(): string {
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, x-api-key',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-export default async function handler(req: any, res: any) {
-  // CORS preflight
-  if (req.method === 'OPTIONS') { res.status(204).setHeaders(CORS).end(); return; }
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS
+  Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
+  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
   if (req.method !== 'POST') { res.status(405).json({ success: false, error: 'Method not allowed' }); return; }
-
-  // Auth check
-  const apiKey = req.headers['x-api-key'];
-  const expectedKey = process.env.AGENT_API_KEY;
-  if (!expectedKey || apiKey !== expectedKey) {
-    res.status(401).json({ success: false, error: 'Unauthorized' }); return;
-  }
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -36,6 +32,18 @@ export default async function handler(req: any, res: any) {
   const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+
+  // Verify caller is authenticated and is ADMIN
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.replace('Bearer ', '').trim();
+  if (!token) { res.status(401).json({ success: false, error: 'Missing authorization token' }); return; }
+
+  const { data: { user: caller }, error: authErr } = await admin.auth.getUser(token);
+  if (authErr || !caller) { res.status(401).json({ success: false, error: 'Invalid or expired token' }); return; }
+
+  // Check ADMIN role
+  const { data: callerProfile } = await admin.from('profiles').select('role').eq('id', caller.id).single();
+  if (callerProfile?.role !== 'ADMIN') { res.status(403).json({ success: false, error: 'Forbidden: ADMIN role required' }); return; }
 
   const { action = 'create', email, role: rawRole, store_id, user_id, invited_by } = req.body;
   const assignedRole = ['ADMIN', 'VENDEDOR'].includes(rawRole) ? rawRole : 'VENDEDOR';
@@ -53,7 +61,7 @@ export default async function handler(req: any, res: any) {
       const newPwd = generatePassword();
       const { error } = await admin.auth.admin.updateUserById(targetId, { password: newPwd });
       if (error) { res.status(500).json({ success: false, error: error.message }); return; }
-      await admin.from('audit_log').insert({ user_email: invited_by ?? 'admin', action: 'USUARIO_RESETEADO', entity_type: 'USER', entity_id: targetId, description: `Password reseteado para ${email}` }).catch(() => {});
+      await admin.from('audit_log').insert({ user_email: invited_by ?? caller.email, action: 'USUARIO_RESETEADO', entity_type: 'USER', entity_id: targetId, description: `Password reseteado para ${email}` }).catch(() => {});
       res.status(200).json({ success: true, action: 'reset', email, generated_password: newPwd }); return;
     }
 
@@ -75,7 +83,7 @@ export default async function handler(req: any, res: any) {
     }
 
     await admin.from('profiles').upsert({ id: userId, email, role: assignedRole, store_id: store_id || null }, { onConflict: 'id' });
-    await admin.from('audit_log').insert({ user_email: invited_by ?? 'admin', action: 'USUARIO_CREADO', entity_type: 'USER', entity_id: userId, description: `Usuario creado: ${email} con rol ${assignedRole}` }).catch(() => {});
+    await admin.from('audit_log').insert({ user_email: invited_by ?? caller.email, action: 'USUARIO_CREADO', entity_type: 'USER', entity_id: userId, description: `Usuario creado: ${email} con rol ${assignedRole}` }).catch(() => {});
 
     res.status(200).json({ success: true, action: 'create', user_id: userId, email, role: assignedRole, generated_password: generatedPassword, message: `Cuenta ${assignedRole} creada.` });
   } catch (err: any) {

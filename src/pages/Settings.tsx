@@ -40,9 +40,10 @@ function UserManagement() {
     if (!email.trim()) return;
     setCreateLoading(true); setCreateMsg(null);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/admin-user', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': import.meta.env.VITE_AGENT_API_KEY },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({ action: 'create', email: email.trim(), role, store_id: role === 'VENDEDOR' ? storeId || null : null, invited_by: profile?.email }),
       });
       const data = await res.json();
@@ -62,9 +63,10 @@ function UserManagement() {
   const handleResetPassword = async (userEmail: string, userId: string) => {
     setResetLoadingId(userId); setResetMsg(null);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/admin-user', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': import.meta.env.VITE_AGENT_API_KEY },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({ action: 'reset', email: userEmail, invited_by: profile?.email }),
       });
       const data = await res.json();
