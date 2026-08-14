@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
 import { Search, Edit2, X, Hash, Phone, Mail, Eye, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { fetchCatalogByTypes } from '../lib/useCatalog';
+import type { CatalogOption } from '../lib/useCatalog';
 
 const fmt = (n: number) => `Bs. ${n.toLocaleString('es-BO', { minimumFractionDigits: 2 })}`;
 
@@ -20,8 +22,7 @@ const emptyEdit = {
   notes: '',
 };
 
-const FRAME_TYPES = ['Metal', 'Acetato', 'Nylon', 'TR90', 'Madera', 'Titanio', 'Otra'];
-const CRYSTAL_TYPES = ['Orgánico', 'Foto Blue (Grey)', 'Foto Blue (Brown)', 'Fotocromático', 'CR-39', 'Policarbonato', 'Hi-Index 1.67', 'Hi-Index 1.74', 'Mineral'];
+
 
 export default function Clients() {
   const { profile } = useAuth();
@@ -36,6 +37,15 @@ export default function Clients() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
   const [showNear, setShowNear] = useState(false);
+  const [frameTypes, setFrameTypes] = useState<CatalogOption[]>([]);
+  const [crystalTypes, setCrystalTypes] = useState<CatalogOption[]>([]);
+
+  useEffect(() => {
+    fetchCatalogByTypes(['FRAME_TYPE', 'CRYSTAL_TYPE']).then(cat => {
+      setFrameTypes(cat.FRAME_TYPE || []);
+      setCrystalTypes(cat.CRYSTAL_TYPE || []);
+    });
+  }, []);
 
   const searchClients = useCallback(async (q: string) => {
     setLoading(true);
@@ -264,14 +274,14 @@ export default function Clients() {
                     <label className="label">Armación</label>
                     <select className="input input-sm" value={f('frame_type')} onChange={set('frame_type')}>
                       <option value="">-- Seleccionar --</option>
-                      {FRAME_TYPES.map(v => <option key={v} value={v}>{v}</option>)}
+                      {frameTypes.map(v => <option key={v.value} value={v.label}>{v.label}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="label">Cristales</label>
                     <select className="input input-sm" value={f('crystal_type')} onChange={set('crystal_type')}>
                       <option value="">-- Seleccionar --</option>
-                      {CRYSTAL_TYPES.map(v => <option key={v} value={v}>{v}</option>)}
+                      {crystalTypes.map(v => <option key={v.value} value={v.label}>{v.label}</option>)}
                     </select>
                   </div>
                   <div><label className="label">Fecha Entrega</label><input className="input input-sm" type="date" value={f('delivery_date')} onChange={set('delivery_date')} /></div>

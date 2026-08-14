@@ -2,10 +2,11 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
 import SearchableDropdown from '../components/shared/SearchableDropdown';
-import {
-  Search, UserPlus, ShoppingCart, ChevronRight, ChevronLeft,
+import { Search, UserPlus, ShoppingCart, ChevronRight, ChevronLeft,
   Plus, Minus, X, Check, AlertCircle, Link, Tag
 } from 'lucide-react';
+import { fetchCatalogByTypes } from '../lib/useCatalog';
+import type { CatalogOption } from '../lib/useCatalog';
 
 const fmt = (n: number) => `Bs. ${n.toLocaleString('es-BO', { minimumFractionDigits: 2 })}`;
 const APP_URL = window.location.origin + window.location.pathname;
@@ -55,7 +56,17 @@ export default function NewSale() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => { loadProducts(); loadStoreConfig(); }, []);
+  const [frameTypes, setFrameTypes] = useState<CatalogOption[]>([]);
+  const [crystalTypes, setCrystalTypes] = useState<CatalogOption[]>([]);
+
+  useEffect(() => {
+    loadProducts();
+    loadStoreConfig();
+    fetchCatalogByTypes(['FRAME_TYPE', 'CRYSTAL_TYPE']).then(cat => {
+      setFrameTypes(cat.FRAME_TYPE || []);
+      setCrystalTypes(cat.CRYSTAL_TYPE || []);
+    });
+  }, []);
 
   const loadProducts = async () => {
     const { data } = await supabase.from('products').select('id, name, sku_code, category, price').eq('active', true).order('name');
@@ -345,13 +356,13 @@ export default function NewSale() {
                     <div><label className="label">Armación</label>
                       <select className="input input-sm" value={(newClientForm as any).frame_type || ''} onChange={e => setNewClientForm(f => ({ ...f, frame_type: e.target.value }))}>
                         <option value="">-- Seleccionar --</option>
-                        {['Metal', 'Acetato', 'Nylon', 'TR90', 'Madera', 'Titanio', 'Otra'].map(v => <option key={v} value={v}>{v}</option>)}
+                        {frameTypes.map(v => <option key={v.value} value={v.label}>{v.label}</option>)}
                       </select>
                     </div>
                     <div><label className="label">Tipo de Cristal</label>
                       <select className="input input-sm" value={(newClientForm as any).crystal_type || ''} onChange={e => setNewClientForm(f => ({ ...f, crystal_type: e.target.value }))}>
                         <option value="">-- Seleccionar --</option>
-                        {['Orgánico', 'Foto Blue (Grey)', 'Foto Blue (Brown)', 'Fotocromático', 'CR-39', 'Policarbonato', 'Hi-Index 1.67', 'Hi-Index 1.74', 'Mineral'].map(v => <option key={v} value={v}>{v}</option>)}
+                        {crystalTypes.map(v => <option key={v.value} value={v.label}>{v.label}</option>)}
                       </select>
                     </div>
                     <div><label className="label">Entrega</label><input className="input input-sm" type="date" value={(newClientForm as any).delivery_date || ''} onChange={e => setNewClientForm(f => ({ ...f, delivery_date: e.target.value }))} /></div>
