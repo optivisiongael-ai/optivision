@@ -6,7 +6,6 @@ import { Search, Edit2, X, Hash, Phone, Mail, Eye, Save, ChevronDown, ChevronUp 
 import { fetchCatalogByTypes } from '../lib/useCatalog';
 import type { CatalogOption } from '../lib/useCatalog';
 import { todayStr, TIME_SLOTS } from '../lib/dateUtils';
-import { PendingSalesList } from './Sales';
 
 const fmt = (n: number) => `Bs. ${n.toLocaleString('es-BO', { minimumFractionDigits: 2 })}`;
 
@@ -42,6 +41,28 @@ export default function Clients() {
   const [showNear, setShowNear] = useState(false);
   const [frameTypes, setFrameTypes] = useState<CatalogOption[]>([]);
   const [crystalTypes, setCrystalTypes] = useState<CatalogOption[]>([]);
+
+  // Finalize sale (inline in historial)
+  const [finalizeClientSale, setFinalizeClientSale] = useState<any | null>(null);
+  const [finalClientBalance, setFinalClientBalance] = useState(0);
+  const [finalClientSaving, setFinalClientSaving] = useState(false);
+
+  const handleFinalizeClientSale = async () => {
+    if (!finalizeClientSale) return;
+    setFinalClientSaving(true);
+    const newBalance = Math.max(0, finalClientBalance);
+    const newAdvance = (finalizeClientSale.total || 0) - newBalance;
+    await supabase.from('sales').update({ status: 'COMPLETED', advance_payment: newAdvance, balance: newBalance }).eq('id', finalizeClientSale.id);
+    await supabase.from('audit_log').insert({
+      user_id: profile?.id, user_email: profile?.email,
+      action: 'VENTA_COMPLETADA', entity_type: 'SALE', entity_id: finalizeClientSale.id,
+      description: `Venta ${finalizeClientSale.sale_code} completada desde Clientes. Saldo cobrado: Bs. ${newBalance}.`,
+    });
+    setFinalClientSaving(false);
+    setFinalizeClientSale(null);
+    // Refresh client sales
+    if (selectedClient) fetchClientSales(selectedClient.id);
+  };
 
   useEffect(() => {
     fetchCatalogByTypes(['FRAME_TYPE', 'CRYSTAL_TYPE']).then(cat => {
@@ -90,17 +111,21 @@ export default function Clients() {
 
   useEffect(() => { searchClients(''); }, []);
 
+  const fetchClientSales = async (clientId: string) => {
+    setSalesLoading(true);
+    const { data } = await supabase.from('sales')
+      .select('id, sale_code, total, advance_payment, balance, status, created_at, sale_items(quantity, unit_price, product:products(name))')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false });
+    setClientSales(data || []);
+    setSalesLoading(false);
+  };
+
   const openClient = async (client: any) => {
     setSelectedClient(client);
     setEditing(false);
     setSaveMsg(null);
-    setSalesLoading(true);
-    const { data } = await supabase.from('sales')
-      .select('id, sale_code, total, advance_payment, balance, status, created_at, sale_items(quantity, unit_price, product:products(name))')
-      .eq('client_id', client.id)
-      .order('created_at', { ascending: false });
-    setClientSales(data || []);
-    setSalesLoading(false);
+    fetchClientSales(client.id);
   };
 
   const startEdit = () => {
@@ -461,9 +486,19 @@ export default function Clients() {
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontWeight: 800, color: 'var(--color-brand-400)' }}>{fmt(sale.total)}</div>
-                        <span className={`badge ${sale.status === 'COMPLETED' ? 'badge-green' : sale.status === 'CANCELLED' ? 'badge-red' : 'badge-yellow'}`} style={{ fontSize: '0.65rem' }}>
-                          {sale.status === 'COMPLETED' ? 'Completada' : sale.status === 'CANCELLED' ? 'Cancelada' : 'Pendiente'}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
+                          <span className={`badge ${sale.status === 'COMPLETED' ? 'badge-green' : sale.status === 'CANCELLED' ? 'badge-red' : 'badge-yellow'}`} style={{ fontSize: '0.65rem' }}>
+                            {sale.status === 'COMPLETED' ? 'Completada' : sale.status === 'CANCELLED' ? 'Cancelada' : 'Pendiente'}
+                          </span>
+                          {sale.status === 'PENDING' && (
+                            <button
+                              onClick={() => { setFinalizeClientSale(sale); setFinalClientBalance(sale.balance || 0); }}
+                              className="btn btn-primary btn-sm"
+                              style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem' }}>
+                              ✓ Finalizar
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
@@ -481,20 +516,39 @@ export default function Clients() {
               </div>
             </div>
 
-            {/* Pending sales quick-finalize */}
-            {selectedClient && (
-              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>⏳ Ventas Pendientes</span>
-                </div>
-                <div style={{ padding: '0.875rem 1rem' }}>
-                  <PendingSalesList clientId={selectedClient.id} />
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
+
+      {/* Finalize modal */}
+      {finalizeClientSale && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '1rem' }}>
+          <div className="card fade-in" style={{ width: '100%', maxWidth: 400, border: '1px solid rgba(16,185,129,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div>
+                <h3 style={{ fontWeight: 800, margin: 0, fontSize: '1rem' }}>✅ Finalizar Entrega</h3>
+                <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{finalizeClientSale.sale_code}</div>
+              </div>
+              <button onClick={() => setFinalizeClientSale(null)} className="btn btn-ghost btn-icon btn-sm"><X size={15} /></button>
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <label className="label">Saldo a cobrar (Bs.)</label>
+              <input type="number" min="0" step="0.01" value={finalClientBalance}
+                onChange={e => setFinalClientBalance(parseFloat(e.target.value) || 0)}
+                className="input" style={{ fontWeight: 700, fontSize: '1.1rem' }} />
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
+                Total: <strong>{fmt(finalizeClientSale.total)}</strong> · Saldo original: <strong style={{ color: '#f59e0b' }}>{fmt(finalizeClientSale.balance)}</strong>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={handleFinalizeClientSale} disabled={finalClientSaving} className="btn btn-primary btn-lg" style={{ flex: 1 }}>
+                {finalClientSaving ? 'Guardando...' : '✅ Confirmar Entrega'}
+              </button>
+              <button onClick={() => setFinalizeClientSale(null)} className="btn btn-ghost">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

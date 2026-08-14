@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
@@ -68,9 +68,8 @@ export default function Sales() {
   const [logLoading, setLogLoading] = useState(false);
   const [logLoaded, setLogLoaded] = useState(false);
 
-  // ── Load pending sales (always loaded first) ──────────────────
-  const loadPending = useCallback(async () => {
-    if (!profile?.id) return;
+  // ── Load pending sales ────────────────────────────────────────
+  const loadPending = async (sid: string, admin: boolean, sf: string) => {
     setPendingLoading(true);
     let q = supabase.from('sales')
       .select(`
@@ -84,18 +83,18 @@ export default function Sales() {
       `)
       .order('created_at', { ascending: false })
       .limit(200);
-    if (!isAdmin) q = q.eq('seller_id', profile.id);
-    if (statusFilter !== 'ALL') q = q.eq('status', statusFilter);
-    const { data } = await q;
+    if (!admin) q = q.eq('seller_id', sid);
+    if (sf !== 'ALL') q = q.eq('status', sf);
+    const { data, error } = await q;
+    if (error) console.error('Sales loadPending error:', error);
     setPendingSales(data || []);
     setPendingLoading(false);
-  }, [profile?.id, isAdmin, statusFilter]);
+  };
 
-  // ── Load sales history ────────────────────────────────────────
-  const loadHistory = useCallback(async () => {
-    if (!profile?.id || historyLoaded) return;
+  // ── Load history ──────────────────────────────────────────────
+  const loadHistory = async (sid: string, admin: boolean) => {
     setHistoryLoading(true);
-    const { data } = await supabase.from('sales')
+    let q = supabase.from('sales')
       .select(`id, sale_code, status, subtotal, discount, total, advance_payment, balance,
         notes, created_at, cancellation_status, cancellation_reason,
         clients:client_id (full_name, client_code, phone),
@@ -103,44 +102,50 @@ export default function Sales() {
         profiles:seller_id (full_name),
         sale_items (id, quantity, unit_price, discount_amount, discount_reason, subtotal,
           products:product_id (id, name, category))`)
-      .eq('seller_id', isAdmin ? undefined : profile.id)
       .order('created_at', { ascending: false })
       .limit(100);
+    if (!admin) q = q.eq('seller_id', sid);
+    const { data, error } = await q;
+    if (error) console.error('Sales loadHistory error:', error);
     setMySales(data || []);
     setHistoryLoading(false);
     setHistoryLoaded(true);
-
-    // Also load products for edit modal
     const { data: prods } = await supabase.from('products').select('id, name, category, price, sku_code').eq('active', true).order('name');
     setProducts(prods || []);
-  }, [profile?.id, isAdmin, historyLoaded]);
+  };
 
-  // ── Load audit log ────────────────────────────────────────────
-  const loadLog = useCallback(async () => {
-    if (!profile?.id || logLoaded) return;
+  // ── Load log ──────────────────────────────────────────────────
+  const loadLog = async (sid: string, admin: boolean) => {
     setLogLoading(true);
     let q = supabase.from('audit_log').select('*').order('created_at', { ascending: false }).limit(100);
-    if (!isAdmin) q = q.eq('user_id', profile.id);
-    const { data } = await q;
+    if (!admin) q = q.eq('user_id', sid);
+    const { data, error } = await q;
+    if (error) console.error('Sales loadLog error:', error);
     setLogs(data || []);
     setLogLoading(false);
     setLogLoaded(true);
-  }, [profile?.id, isAdmin, logLoaded]);
+  };
 
-  // Initial load
-  useEffect(() => { loadPending(); }, [loadPending]);
-
-  // Lazy-load tabs on first visit
+  // ── Effects ───────────────────────────────────────────────────
   useEffect(() => {
-    if (tab === 'history') loadHistory();
-    if (tab === 'log') loadLog();
-  }, [tab]);
+    if (!profile?.id) return;
+    loadPending(profile.id, isAdmin, statusFilter);
+  }, [profile?.id, isAdmin, statusFilter]);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    if (tab === 'history' && !historyLoaded) loadHistory(profile.id, isAdmin);
+    if (tab === 'log' && !logLoaded) loadLog(profile.id, isAdmin);
+  }, [tab, profile?.id, isAdmin]);
 
   // Refresh all
   const refreshAll = () => {
+    if (!profile?.id) return;
     setHistoryLoaded(false);
     setLogLoaded(false);
-    loadPending();
+    loadPending(profile.id, isAdmin, statusFilter);
+    if (tab === 'history') { setHistoryLoaded(false); loadHistory(profile.id, isAdmin); }
+    if (tab === 'log') { setLogLoaded(false); loadLog(profile.id, isAdmin); }
   };
 
   // ── Pending: filtered memo ────────────────────────────────────
@@ -183,7 +188,8 @@ export default function Sales() {
       action: 'VENTA_COMPLETADA', entity_type: 'SALE', entity_id: finalizeSale.id,
       description: `Venta ${finalizeSale.sale_code} marcada como COMPLETADA. Saldo cobrado: ${fmt(newBalance)}.`,
     });
-    setFinalizing(false); setFinalizeSale(null); loadPending();
+    setFinalizing(false); setFinalizeSale(null);
+    if (profile?.id) loadPending(profile.id, isAdmin, statusFilter);
   };
 
   // ── History: cancel ───────────────────────────────────────────
@@ -202,7 +208,7 @@ export default function Sales() {
       });
       setCancelSale(null);
       setHistoryLoaded(false);
-      loadHistory();
+      if (profile?.id) loadHistory(profile.id, isAdmin);
     }
     setCancelSaving(false);
   };
@@ -269,7 +275,7 @@ export default function Sales() {
       });
       setEditSale(null);
       setHistoryLoaded(false);
-      loadHistory();
+      if (profile?.id) loadHistory(profile.id, isAdmin);
     } catch (err: any) {
       setEditError(err.message || 'Error al guardar cambios');
     }
