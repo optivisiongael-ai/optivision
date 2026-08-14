@@ -6,6 +6,7 @@ import { Search, Edit2, X, Hash, Phone, Mail, Eye, Save, ChevronDown, ChevronUp 
 import { fetchCatalogByTypes } from '../lib/useCatalog';
 import type { CatalogOption } from '../lib/useCatalog';
 import { todayStr, TIME_SLOTS } from '../lib/dateUtils';
+import { PendingSalesList } from './Sales';
 
 const fmt = (n: number) => `Bs. ${n.toLocaleString('es-BO', { minimumFractionDigits: 2 })}`;
 
@@ -479,6 +480,18 @@ export default function Clients() {
                 ))}
               </div>
             </div>
+
+            {/* Pending sales quick-finalize */}
+            {selectedClient && (
+              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>⏳ Ventas Pendientes</span>
+                </div>
+                <div style={{ padding: '0.875rem 1rem' }}>
+                  <PendingSalesList clientId={selectedClient.id} />
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

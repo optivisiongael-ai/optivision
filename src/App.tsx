@@ -12,6 +12,7 @@ import NewSale from './pages/NewSale';
 import Clients from './pages/Clients';
 import MyActivity from './pages/MyActivity';
 import SaleReceipt from './pages/SaleReceipt';
+import Sales from './pages/Sales';
 
 // ── Protected Route (requiere sesión activa) ───────────────────
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
@@ -56,6 +57,7 @@ function AppRoutes() {
         <Route path="new-sale" element={<NewSale />} />
         <Route path="clients" element={<Clients />} />
         <Route path="my-activity" element={<MyActivity />} />
+        <Route path="ventas" element={<Sales />} />
 
         {/* 404 */}
         <Route path="*" element={<Navigate to="/" replace />} />

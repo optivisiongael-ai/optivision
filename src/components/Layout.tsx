@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Warehouse, Settings, ShoppingCart,
-  Users, Activity, LogOut, Menu, X, ChevronRight, Moon, Sun
+  Users, Activity, LogOut, Menu, X, ChevronRight, Moon, Sun, ClipboardList
 } from 'lucide-react';
 import { useAuth } from '../lib/supabase/auth';
 import { useNavGuard } from '../lib/navGuard';
@@ -24,6 +24,7 @@ export default function Layout() {
 
   const adminNav = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { name: 'Ventas', path: '/ventas', icon: ClipboardList },
     { name: 'Productos / SKUs', path: '/products', icon: Package },
     { name: 'Inventario', path: '/inventory', icon: Warehouse },
     { name: 'Configuración', path: '/settings', icon: Settings },
@@ -32,6 +33,7 @@ export default function Layout() {
   const vendedorNav = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Nueva Venta', path: '/new-sale', icon: ShoppingCart },
+    { name: 'Ventas', path: '/ventas', icon: ClipboardList },
     { name: 'Clientes', path: '/clients', icon: Users },
     { name: 'Mi Actividad', path: '/my-activity', icon: Activity },
     { name: 'Mi Perfil', path: '/settings', icon: Settings },

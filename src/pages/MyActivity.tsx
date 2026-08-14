@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
 import { Activity, RefreshCw, Edit2, XCircle, Check, X, Link, AlertCircle } from 'lucide-react';
+import { PendingSalesList } from './Sales';
 
 const fmt = (n: number) => `Bs. ${Number(n).toLocaleString('es-BO', { minimumFractionDigits: 2 })}`;
 const fmtDate = (iso: string) => new Date(iso).toLocaleString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -16,7 +17,7 @@ export default function MyActivity() {
   const [sales, setSales] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'sales' | 'log'>('sales');
+  const [tab, setTab] = useState<'pending' | 'sales' | 'log'>('pending');
   const [copied, setCopied] = useState<string | null>(null);
 
   // Cancel modal
@@ -190,8 +191,12 @@ export default function MyActivity() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-        {[{ id: 'sales', label: '🛒 Mis Ventas' }, { id: 'log', label: '📋 Registro de Acciones' }].map(t => (
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+        {[
+          { id: 'pending', label: '⏳ Pendientes de entrega' },
+          { id: 'sales', label: '🛝 Mis Ventas' },
+          { id: 'log', label: '📋 Registro' },
+        ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id as any)}
             className={tab === t.id ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'}>
             {t.label}
@@ -200,6 +205,14 @@ export default function MyActivity() {
       </div>
 
       {loading && <div className="spinner" style={{ margin: '3rem auto' }} />}
+
+      {/* ── Pending tab ── */}
+      {!loading && tab === 'pending' && (
+        <div className="card">
+          <h4 style={{ fontWeight: 700, marginBottom: '1rem', fontSize: '0.95rem' }}>⏳ Ventas pendientes de entrega</h4>
+          <PendingSalesList sellerId={profile?.id} onFinalized={loadData} />
+        </div>
+      )}
 
       {/* ── Sales tab ── */}
       {!loading && tab === 'sales' && (

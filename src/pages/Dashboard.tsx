@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
 import {
   ShoppingCart, Users, TrendingUp, Package, Store,
-  AlertTriangle, Activity, RefreshCw, Eye
+  AlertTriangle, Activity, RefreshCw, Eye, Clock
 } from 'lucide-react';
+import { PendingSalesList } from './Sales';
 
 const fmt = (n: number) => `Bs. ${n.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -408,6 +410,22 @@ function VendedorDashboard() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Pending deliveries */}
+      <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid rgba(245,158,11,0.25)' }}>
+        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+            <Clock size={16} style={{ color: '#f59e0b' }} />
+            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--color-text-primary)' }}>Entregas Pendientes</span>
+          </div>
+          <Link to="/ventas" style={{ fontSize: '0.78rem', color: 'var(--color-brand-400)', textDecoration: 'none', fontWeight: 600 }}>
+            Ver todas →
+          </Link>
+        </div>
+        <div style={{ padding: '0.875rem 1rem' }}>
+          <PendingSalesList sellerId={profile?.id} />
+        </div>
       </div>
 
       {/* Recent sales */}
