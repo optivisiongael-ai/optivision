@@ -65,11 +65,19 @@ export default function Login() {
       <div className="fade-in" style={{ width: '100%', maxWidth: 420, position: 'relative', zIndex: 1 }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <img
-            src="/logo.png"
-            alt="OPTIVISION"
-            style={{ height: 300, width: 'auto', objectFit: 'contain', margin: '0 auto', display: 'block' }}
-          />
+          <div style={{
+            display: 'inline-block',
+            background: 'white',
+            borderRadius: 24,
+            padding: '12px 24px',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+          }}>
+            <img
+              src="/logo.png"
+              alt="OPTIVISION"
+              style={{ height: 220, width: 'auto', objectFit: 'contain', display: 'block' }}
+            />
+          </div>
         </div>
 
         {/* Config warning when .env is not set */}
