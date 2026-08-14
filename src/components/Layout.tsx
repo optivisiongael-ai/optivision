@@ -5,11 +5,13 @@ import {
   Users, Activity, LogOut, Menu, X, ChevronRight, Moon, Sun
 } from 'lucide-react';
 import { useAuth } from '../lib/supabase/auth';
+import { useNavGuard } from '../lib/navGuard';
 
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
+  const { requestNav } = useNavGuard();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
 
@@ -113,7 +115,11 @@ export default function Layout() {
               <Link
                 key={item.path}
                 to={item.path}
-                onClick={closeSidebar}
+                onClick={e => {
+                  e.preventDefault();
+                  closeSidebar();
+                  requestNav(item.path);
+                }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '0.75rem',
                   padding: '0.625rem 0.875rem', borderRadius: 10,

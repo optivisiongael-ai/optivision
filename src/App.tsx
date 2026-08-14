@@ -1,6 +1,7 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import type { ReactElement } from 'react';
 import { AuthProvider, useAuth } from './lib/supabase/auth';
+import { NavGuardProvider } from './lib/navGuard';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -67,7 +68,9 @@ function App() {
   return (
     <AuthProvider>
       <HashRouter>
-        <AppRoutes />
+        <NavGuardProvider>
+          <AppRoutes />
+        </NavGuardProvider>
       </HashRouter>
     </AuthProvider>
   );
