@@ -20,10 +20,12 @@ type SaleItem = {
   category: string;
   quantity: number;
   unitPrice: number;
-  itemMaxDiscount: number; // from product.max_discount
+  itemMaxDiscount: number;
   discountAmount: number;
   discountReason: string;
-  subtotal: number; // (unitPrice - discountAmount) * quantity
+  subtotal: number;
+  options: string;        // comma-separated variants from product
+  selectedOption: string; // which variant the client chose
 };
 
 const DISCOUNT_REASONS = ['Promoción', 'Cliente frecuente', 'Producto con detalle', 'Cortesía', 'Otro'];
@@ -62,7 +64,7 @@ export default function NewSale() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from('products').select('id, name, sku_code, category, price, max_discount').eq('active', true).order('name'),
+      supabase.from('products').select('id, name, sku_code, category, price, max_discount, options').eq('active', true).order('name'),
       fetchCatalogByTypes(['PRODUCT_CATEGORY']),
     ]).then(([productsRes, cat]) => {
       const all = productsRes.data || [];
@@ -140,7 +142,7 @@ export default function NewSale() {
           ? { ...i, quantity: i.quantity + 1, subtotal: (i.quantity + 1) * (i.unitPrice - i.discountAmount) }
           : i);
       }
-      return [...prev, { productId: prod.id, name: prod.name, category: prod.category, quantity: 1, unitPrice: prod.price, itemMaxDiscount: prod.max_discount ?? 0, discountAmount: 0, discountReason: '', subtotal: prod.price }];
+      return [...prev, { productId: prod.id, name: prod.name, category: prod.category, quantity: 1, unitPrice: prod.price, itemMaxDiscount: prod.max_discount ?? 0, discountAmount: 0, discountReason: '', subtotal: prod.price, options: prod.options || '', selectedOption: '' }];
     });
   };
 
@@ -171,6 +173,10 @@ export default function NewSale() {
 
   const updateItemDiscountReason = (productId: string, reason: string) => {
     setSaleItems(prev => prev.map(i => i.productId !== productId ? i : { ...i, discountReason: reason }));
+  };
+
+  const updateItemOption = (productId: string, option: string) => {
+    setSaleItems(prev => prev.map(i => i.productId !== productId ? i : { ...i, selectedOption: option }));
   };
 
   const removeItem = (productId: string) => setSaleItems(prev => prev.filter(i => i.productId !== productId));
@@ -248,6 +254,7 @@ export default function NewSale() {
         sale_id: newSale.id, product_id: i.productId, quantity: i.quantity,
         unit_price: i.unitPrice, discount_amount: i.discountAmount,
         discount_reason: i.discountReason || null, subtotal: i.subtotal,
+        selected_option: i.selectedOption || null,
       }));
       const { error: ie } = await supabase.from('sale_items').insert(itemsPayload);
       if (ie) throw new Error(ie.message);
@@ -379,13 +386,10 @@ export default function NewSale() {
                   <div><label className="label">Nombre Completo *</label><input className="input" required value={newClientForm.full_name} onChange={e => setNewClientForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Juan Pérez" /></div>
                   <div><label className="label">Teléfono</label><input className="input" value={newClientForm.phone} onChange={e => setNewClientForm(f => ({ ...f, phone: e.target.value }))} placeholder="+591 70000000" /></div>
                   <div><label className="label">Email</label><input className="input" type="email" value={newClientForm.email} onChange={e => setNewClientForm(f => ({ ...f, email: e.target.value }))} placeholder="cliente@email.com" /></div>
+                  <div><label className="label">Edad</label><input className="input" value={(newClientForm as any).age || ''} onChange={e => setNewClientForm(f => ({ ...f, age: e.target.value }))} placeholder="Ej: 35" /></div>
                 </div>
                 <div>
                   <p className="section-title" style={{ marginBottom: '0.875rem' }}>🔭 Medidas Ópticas (Opcional)</p>
-                  {/* Info básica del paciente */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
-                    <div><label className="label">Edad</label><input className="input input-sm" value={(newClientForm as any).age || ''} onChange={e => setNewClientForm(f => ({ ...f, age: e.target.value }))} placeholder="Ej: 35" /></div>
-                  </div>
 
                   {/* LEJOS */}
                   <div style={{ background: 'var(--color-bg-input)', borderRadius: 10, padding: '0.875rem', marginBottom: '0.75rem', border: '1px solid var(--color-border)' }}>
@@ -500,6 +504,23 @@ export default function NewSale() {
                         <span style={{ fontWeight: 700, color: 'var(--color-brand-400)', fontSize: '0.875rem', minWidth: 80, textAlign: 'right' }}>{fmt(item.subtotal)}</span>
                         <button onClick={() => removeItem(item.productId)} className="btn btn-danger btn-icon btn-sm"><X size={12} /></button>
                       </div>
+                      {/* Option row — only if product has variants */}
+                      {item.options && (
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', paddingTop: '0.5rem', borderTop: '1px solid var(--color-border)' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', flexShrink: 0 }}>🏷️ Variante:</span>
+                          <select
+                            className="input input-sm"
+                            value={item.selectedOption}
+                            onChange={e => updateItemOption(item.productId, e.target.value)}
+                            style={{ flex: 1 }}
+                          >
+                            <option value="">— Sin especificar —</option>
+                            {item.options.split(',').map(o => o.trim()).filter(Boolean).map(opt => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                       {/* Discount row */}
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', paddingTop: '0.5rem', borderTop: '1px solid var(--color-border)' }}>
                         <Tag size={13} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />

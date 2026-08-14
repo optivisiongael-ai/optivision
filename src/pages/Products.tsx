@@ -15,6 +15,7 @@ const fmt = (n: number) => `Bs. ${n.toLocaleString('es-BO', { minimumFractionDig
 const emptyForm = {
   sku_code: '', name: '', description: '', category: '',
   price: '', initial_stock: '0', min_stock_alert: '5', max_discount: '0',
+  options: '', // Comma-separated variants, e.g. "Rojo, Azul, Negro"
 };
 
 // ── Catalog Manager ───────────────────────────────────────────────────────────
@@ -151,8 +152,6 @@ export default function Products() {
 
   // Catalog options
   const [categories, setCategories] = useState<CatalogOption[]>([]);
-  const [frameTypes, setFrameTypes] = useState<CatalogOption[]>([]);
-  const [crystalTypes, setCrystalTypes] = useState<CatalogOption[]>([]);
 
   // ── Inventory tab state ────────────────────────────────────────────────────
   const [invStores, setInvStores] = useState<any[]>([]);
@@ -177,10 +176,8 @@ export default function Products() {
 
   // ── Catalog functions ──────────────────────────────────────────────────────
   const fetchCatalog = async () => {
-    const cat = await fetchCatalogByTypes(['PRODUCT_CATEGORY', 'FRAME_TYPE', 'CRYSTAL_TYPE']);
+    const cat = await fetchCatalogByTypes(['PRODUCT_CATEGORY']);
     setCategories(cat.PRODUCT_CATEGORY || []);
-    setFrameTypes(cat.FRAME_TYPE || []);
-    setCrystalTypes(cat.CRYSTAL_TYPE || []);
   };
 
   const fetchProducts = async () => {
@@ -259,6 +256,7 @@ export default function Products() {
       sku_code: p.sku_code, name: p.name, description: p.description || '',
       category: p.category, price: String(p.price), initial_stock: '0',
       min_stock_alert: String(p.min_stock_alert ?? 5), max_discount: String(p.max_discount ?? 0),
+      options: p.options || '',
     });
     setEditId(p.id); setShowForm(true); setMsg(null);
   };
@@ -275,6 +273,7 @@ export default function Products() {
       price: parseFloat(form.price) || 0,
       min_stock_alert: parseInt(form.min_stock_alert) || 0,
       max_discount: parseFloat(form.max_discount) || 0,
+      options: form.options.trim() || null,
     };
     if (editId) {
       const { error } = await supabase.from('products').update(payload).eq('id', editId);
@@ -513,6 +512,17 @@ export default function Products() {
                     <label className="label" htmlFor="prod-desc">Descripción</label>
                     <textarea id="prod-desc" className="input" rows={2} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Descripción opcional..." style={{ resize: 'vertical' }} />
                   </div>
+                  <div>
+                    <label className="label" htmlFor="prod-options">Opciones / Variantes <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(separadas por coma)</span></label>
+                    <input id="prod-options" className="input" value={form.options} onChange={e => setForm(f => ({ ...f, options: e.target.value }))} placeholder="Ej: Rojo, Azul, Negro, Dorado" />
+                    {form.options.trim() && (
+                      <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                        {form.options.split(',').map(o => o.trim()).filter(Boolean).map((opt, i) => (
+                          <span key={i} style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem', background: 'var(--color-bg-elevated)', border: '1px solid var(--color-brand-600)', borderRadius: 99, color: 'var(--color-brand-400)' }}>{opt}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                     <button type="button" onClick={() => setShowForm(false)} className="btn btn-secondary">Cancelar</button>
                     <button id="btn-save-product" type="submit" disabled={saving} className="btn btn-primary">
@@ -630,22 +640,6 @@ export default function Products() {
                     color="teal"
                     options={categories}
                     onAdd={(label, extra) => addCatalogOption('PRODUCT_CATEGORY', label, extra)}
-                    onRemove={removeCatalogOption}
-                    onEdit={editCatalogOption}
-                  />
-                  <CatalogSection
-                    title="Tipos de Armazón"
-                    color="blue"
-                    options={frameTypes}
-                    onAdd={(label) => addCatalogOption('FRAME_TYPE', label)}
-                    onRemove={removeCatalogOption}
-                    onEdit={editCatalogOption}
-                  />
-                  <CatalogSection
-                    title="Tipos de Cristal"
-                    color="purple"
-                    options={crystalTypes}
-                    onAdd={(label) => addCatalogOption('CRYSTAL_TYPE', label)}
                     onRemove={removeCatalogOption}
                     onEdit={editCatalogOption}
                   />
