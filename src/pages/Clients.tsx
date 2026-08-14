@@ -271,7 +271,7 @@ export default function Clients() {
                   <div><label className="label">Email</label><input className="input input-sm" type="email" value={f('email')} onChange={set('email')} /></div>
                   <div><label className="label">Edad</label><input className="input input-sm" value={f('age')} onChange={set('age')} placeholder="Ej: 35" /></div>
                   <div>
-                    <label className="label">Armación</label>
+                    <label className="label">Armazón</label>
                     <select className="input input-sm" value={f('frame_type')} onChange={set('frame_type')}>
                       <option value="">-- Seleccionar --</option>
                       {frameTypes.map(v => <option key={v.value} value={v.label}>{v.label}</option>)}

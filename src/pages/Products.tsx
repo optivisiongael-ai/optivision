@@ -396,7 +396,7 @@ export default function Products() {
             <div className="icon-box icon-box-purple" style={{ width: 32, height: 32 }}><Settings2 size={14} /></div>
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--color-text-primary)' }}>⚙️ Gestionar Catálogo</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Categorías de producto, tipos de armación y cristal</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Categorías de producto, tipos de armazón y cristal</div>
             </div>
           </div>
           {showCatalog ? <ChevronUp size={18} color="var(--color-text-muted)" /> : <ChevronDown size={18} color="var(--color-text-muted)" />}
@@ -414,7 +414,7 @@ export default function Products() {
                 onEdit={editCatalogOption}
               />
               <CatalogSection
-                title="Tipos de Armación"
+                title="Tipos de Armazón"
                 color="blue"
                 options={frameTypes}
                 onAdd={(label) => addCatalogOption('FRAME_TYPE', label)}

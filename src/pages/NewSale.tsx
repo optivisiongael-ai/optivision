@@ -353,7 +353,7 @@ export default function NewSale() {
                   {/* Info básica del paciente */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
                     <div><label className="label">Edad</label><input className="input input-sm" value={(newClientForm as any).age || ''} onChange={e => setNewClientForm(f => ({ ...f, age: e.target.value }))} placeholder="Ej: 35" /></div>
-                    <div><label className="label">Armación</label>
+                    <div><label className="label">Armazón</label>
                       <select className="input input-sm" value={(newClientForm as any).frame_type || ''} onChange={e => setNewClientForm(f => ({ ...f, frame_type: e.target.value }))}>
                         <option value="">-- Seleccionar --</option>
                         {frameTypes.map(v => <option key={v.value} value={v.label}>{v.label}</option>)}
