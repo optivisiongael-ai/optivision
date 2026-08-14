@@ -443,6 +443,8 @@ export default function Sales() {
               )}
             </>
           )}
+        </>
+      )}
 
       {/* ─────────────────── TAB: HISTORY ─────────────────────── */}
       {tab === 'history' && (
