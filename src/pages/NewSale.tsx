@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useBlocker } from 'react-router-dom';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
 import SearchableDropdown from '../components/shared/SearchableDropdown';
@@ -87,7 +88,14 @@ export default function NewSale() {
         setMaxDiscount(alertRes.data.max_discount_per_item);
       }
     });
-  }, [profile?.store_id]);
+  }, [profile?.id]);  // wait for auth profile before fetching
+
+  // Block in-app navigation when sale is in progress
+  const saleBlocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      (step !== 'client' || saleItems.length > 0) &&
+      currentLocation.pathname !== nextLocation.pathname
+  );
 
   // Guard: warn on unsaved sale in progress
   useEffect(() => {
@@ -634,6 +642,29 @@ export default function NewSale() {
             <button onClick={resetForm} className="btn btn-primary btn-lg" style={{ width: '100%' }}>
               <ShoppingCart size={18} /> Nueva Venta
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Navigation blocker modal ─────────────────────────── */}
+      {saleBlocker.state === 'blocked' && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="card fade-in" style={{ maxWidth: 420, width: '100%', textAlign: 'center', padding: '2rem' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🛒</div>
+            <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
+              Venta en progreso
+            </h3>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+              Tienes una venta sin confirmar. Si navegas ahora perderás todo el progreso. ¿Deseas salir?
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button onClick={() => saleBlocker.reset?.()} className="btn btn-secondary">
+                Continuar venta
+              </button>
+              <button onClick={() => saleBlocker.proceed?.()} className="btn btn-danger">
+                Abandonar venta
+              </button>
+            </div>
           </div>
         </div>
       )}

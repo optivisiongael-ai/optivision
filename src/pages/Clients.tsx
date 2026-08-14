@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useBlocker } from 'react-router-dom';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
 import { Search, Edit2, X, Hash, Phone, Mail, Eye, Save, ChevronDown, ChevronUp } from 'lucide-react';
@@ -48,7 +49,12 @@ export default function Clients() {
     });
   }, []);
 
-  // Guard: warn when there are unsaved client edits
+  // Block in-app SPA navigation when editing
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      editing && currentLocation.pathname !== nextLocation.pathname
+  );
+
   useEffect(() => {
     const guard = (e: BeforeUnloadEvent) => {
       if (editing) {
@@ -472,6 +478,35 @@ export default function Clients() {
             </div>
           </div>
         )}
+
+      {/* ── Blocker: unsaved navigation confirmation ─────────────────── */}
+      {blocker.state === 'blocked' && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="card fade-in" style={{ maxWidth: 420, width: '100%', textAlign: 'center', padding: '2rem' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>⚠️</div>
+            <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
+              Tienes cambios sin guardar
+            </h3>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+              Si navegas ahora perderás la información que estás editando. ¿Deseas continuar?
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button
+                onClick={() => blocker.reset?.()}
+                className="btn btn-secondary"
+              >
+                Continuar editando
+              </button>
+              <button
+                onClick={() => blocker.proceed?.()}
+                className="btn btn-danger"
+              >
+                Abandonar cambios
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
