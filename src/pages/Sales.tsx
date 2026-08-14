@@ -69,20 +69,18 @@ export default function Sales() {
   const [logLoaded, setLogLoaded] = useState(false);
 
   // ── Load pending sales ────────────────────────────────────────
-  const loadPending = async (sid: string, admin: boolean, sf: string) => {
+  const loadPending = async (sf: string) => {
     setPendingLoading(true);
     let q = supabase.from('sales')
       .select(`
         id, sale_code, status, seller_id, subtotal, discount, total, advance_payment, balance,
         notes, created_at, delivery_date,
         clients:client_id (full_name, client_code, phone),
-        stores:store_id (name),
         sale_items (id, quantity, unit_price, discount_amount, subtotal,
           products:product_id (name, category))
       `)
       .order('created_at', { ascending: false })
       .limit(200);
-    if (!admin) q = q.eq('seller_id', sid);
     if (sf !== 'ALL') q = q.eq('status', sf);
     const { data, error } = await q;
     if (error) {
@@ -133,7 +131,7 @@ export default function Sales() {
   // ── Effects ───────────────────────────────────────────────────
   useEffect(() => {
     if (!profile?.id) return;
-    loadPending(profile.id, isAdmin, statusFilter);
+    loadPending(statusFilter);
   }, [profile?.id, isAdmin, statusFilter]);
 
   useEffect(() => {
@@ -147,7 +145,7 @@ export default function Sales() {
     if (!profile?.id) return;
     setHistoryLoaded(false);
     setLogLoaded(false);
-    loadPending(profile.id, isAdmin, statusFilter);
+    loadPending(statusFilter);
     if (tab === 'history') { setHistoryLoaded(false); loadHistory(profile.id, isAdmin); }
     if (tab === 'log') { setLogLoaded(false); loadLog(profile.id, isAdmin); }
   };
@@ -193,7 +191,7 @@ export default function Sales() {
       description: `Venta ${finalizeSale.sale_code} marcada como COMPLETADA. Saldo cobrado: ${fmt(newBalance)}.`,
     });
     setFinalizing(false); setFinalizeSale(null);
-    if (profile?.id) loadPending(profile.id, isAdmin, statusFilter);
+    if (profile?.id) loadPending(statusFilter);
   };
 
   // ── History: cancel ───────────────────────────────────────────
