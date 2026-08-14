@@ -57,18 +57,11 @@ export default function Layout() {
           : 'linear-gradient(135deg, rgba(0,80,180,0.04), transparent)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-          <div style={{
-            background: 'white',
-            borderRadius: 16,
-            padding: '6px 12px',
-            display: 'inline-flex',
-          }}>
-            <img
-              src="/logo.png"
-              alt="OPTIVISION"
-              style={{ height: 90, width: 'auto', objectFit: 'contain' }}
-            />
-          </div>
+          <img
+            src="/logo.png"
+            alt="OPTIVISION"
+            style={{ height: 110, width: 'auto', objectFit: 'contain' }}
+          />
         </div>
         {/* Close button – only visible on mobile */}
         <button
