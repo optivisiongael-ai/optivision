@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
-import { Search, Edit2, X, Check, Hash, Phone, Mail, Eye, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Edit2, X, Hash, Phone, Mail, Eye, Save, ChevronDown, ChevronUp } from 'lucide-react';
 
 const fmt = (n: number) => `Bs. ${n.toLocaleString('es-BO', { minimumFractionDigits: 2 })}`;
 
@@ -353,9 +353,6 @@ export default function Clients() {
                 <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-brand-400)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>📏 Lejos</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 1fr 1fr', gap: '0.375rem', marginBottom: '0.875rem', fontSize: '0.8rem' }}>
                   <span />{['Esfera', 'Cilindro', 'Eje', 'DIP'].map(h => <span key={h} style={{ color: 'var(--color-text-muted)', textAlign: 'center', fontSize: '0.7rem' }}>{h}</span>)}
-                  {[['O.D.', 'od_sphere', 'od_cylinder', 'od_axis', 'dip_far'], ['O.I.', 'oi_sphere', 'oi_cylinder', 'oi_axis', null]].map(([lbl, ...keys]) => (
-                    <>{`${lbl}`}</>
-                  ))}
                   {[['O.D.', selectedClient.od_sphere, selectedClient.od_cylinder, selectedClient.od_axis, selectedClient.dip_far],
                     ['O.I.', selectedClient.oi_sphere, selectedClient.oi_cylinder, selectedClient.oi_axis, null]].map(([lbl, ...vals]) => (
                     <div key={String(lbl)} style={{ display: 'contents' }}>
