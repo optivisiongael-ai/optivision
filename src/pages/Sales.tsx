@@ -68,15 +68,20 @@ export default function Sales() {
   const [logLoading, setLogLoading] = useState(false);
   const [logLoaded, setLogLoaded] = useState(false);
 
+  const [pendingError, setPendingError] = useState<string | null>(null);
+
   // ── Load pending sales ────────────────────────────────────────
   const loadPending = async (sf: string) => {
     setPendingLoading(true);
+    setPendingError(null);
+    // NOTE: only columns guaranteed in init migration (no delivery_date, no discount_amount)
     let q = supabase.from('sales')
       .select(`
-        id, sale_code, status, seller_id, subtotal, discount, total, advance_payment, balance,
-        notes, created_at, delivery_date,
+        id, sale_code, status, seller_id,
+        subtotal, discount, total, advance_payment, balance,
+        notes, created_at,
         clients:client_id (full_name, client_code, phone),
-        sale_items (id, quantity, unit_price, discount_amount, subtotal,
+        sale_items (quantity, unit_price, subtotal,
           products:product_id (name, category))
       `)
       .order('created_at', { ascending: false })
@@ -84,11 +89,14 @@ export default function Sales() {
     if (sf !== 'ALL') q = q.eq('status', sf);
     const { data, error } = await q;
     if (error) {
-      console.error('loadPending error:', error.message, '|', error.details, '|', error.hint);
+      const msg = `Error: ${error.message} | ${error.details || ''} | hint: ${error.hint || ''}`;
+      console.error('loadPending FAILED:', msg);
+      setPendingError(msg);
+      setPendingSales([]);
       setPendingLoading(false);
       return;
     }
-    console.log('loadPending OK — rows:', data?.length);
+    console.log('loadPending OK — rows:', data?.length, data?.[0]);
     setPendingSales(data || []);
     setPendingLoading(false);
   };
@@ -376,6 +384,12 @@ export default function Sales() {
             <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}><div className="spinner" /></div>
           ) : (
             <>
+              {pendingError && (
+                <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '0.875rem 1rem', marginBottom: '1rem', fontSize: '0.8rem', color: '#ef4444' }}>
+                  <strong>⚠️ Error al cargar ventas:</strong><br />
+                  <code style={{ fontSize: '0.72rem', wordBreak: 'break-all' }}>{pendingError}</code>
+                </div>
+              )}
               <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem', display: 'flex', gap: '1rem' }}>
                 <span>{pendingSales.length} venta{pendingSales.length !== 1 ? 's' : ''} cargada{pendingSales.length !== 1 ? 's' : ''}</span>
                 {search && <span>→ {filtered.length} coincidencia{filtered.length !== 1 ? 's' : ''} con "{search}"</span>}
