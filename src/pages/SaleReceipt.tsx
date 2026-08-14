@@ -79,7 +79,11 @@ export default function SaleReceipt() {
       <div style={{ maxWidth: 480, margin: '0 auto' }} className="receipt-wrapper">
         {/* Header */}
         <div style={{ background: 'white', borderRadius: 20, padding: '2rem', marginBottom: '1rem', boxShadow: '0 4px 24px rgba(0,0,0,0.08)', textAlign: 'center' }}>
-          <img src="/logo.png" alt="OPTIVISION" style={{ height: 90, width: 'auto', objectFit: 'contain', marginBottom: '0.75rem' }} />
+          <img
+            src={sale.stores?.logo_url || '/logo.png'}
+            alt={sale.stores?.name || 'OPTIVISION'}
+            style={{ height: 90, width: 'auto', objectFit: 'contain', marginBottom: '0.75rem', display: 'block', margin: '0 auto 0.75rem' }}
+          />
           <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{sale.stores?.name || 'OPTIVISION'}</div>
           {sale.stores?.address && <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{sale.stores.address}</div>}
           {sale.stores?.phone && <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{sale.stores.phone}</div>}

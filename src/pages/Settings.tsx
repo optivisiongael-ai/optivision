@@ -303,6 +303,7 @@ function StoreManagement() {
   const [form, setForm] = useState({ name: '', address: '', phone: '' });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
+  const [logoUploading, setLogoUploading] = useState<string | null>(null); // storeId being uploaded
 
   useEffect(() => { fetchStores(); }, []);
 
@@ -338,6 +339,21 @@ function StoreManagement() {
   const toggleActive = async (storeId: string, current: boolean) => {
     await supabase.from('stores').update({ active: !current }).eq('id', storeId);
     fetchStores();
+  };
+
+  const uploadLogo = async (storeId: string, file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    setLogoUploading(storeId);
+    const ext = file.name.split('.').pop();
+    const path = `${storeId}/logo.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from('store-logos')
+      .upload(path, file, { upsert: true, contentType: file.type });
+    if (upErr) { alert('Error al subir logo: ' + upErr.message); setLogoUploading(null); return; }
+    const { data: { publicUrl } } = supabase.storage.from('store-logos').getPublicUrl(path);
+    await supabase.from('stores').update({ logo_url: publicUrl }).eq('id', storeId);
+    fetchStores();
+    setLogoUploading(null);
   };
 
   return (
@@ -385,7 +401,24 @@ function StoreManagement() {
         {loading ? <div className="spinner" /> : stores.map(s => (
           <div key={s.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', opacity: s.active ? 1 : 0.65 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-              <div className="icon-box icon-box-teal"><Eye size={18} /></div>
+              {/* Logo preview */}
+              <div style={{ position: 'relative' }}>
+                <label htmlFor={`logo-upload-${s.id}`} style={{ cursor: 'pointer', display: 'block' }} title="Click para cambiar el logo">
+                  {s.logo_url
+                    ? <img src={s.logo_url} alt="Logo" style={{ height: 52, width: 52, objectFit: 'contain', borderRadius: 8, border: '2px solid var(--color-border)', background: 'white', padding: 2 }} />
+                    : <div style={{ height: 52, width: 52, borderRadius: 8, border: '2px dashed var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', color: 'var(--color-text-muted)' }}>🏪</div>
+                  }
+                  <div style={{ position: 'absolute', bottom: -4, right: -4, background: 'var(--color-brand-500)', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem' }}>
+                    {logoUploading === s.id ? '⏳' : '📷'}
+                  </div>
+                </label>
+                <input
+                  id={`logo-upload-${s.id}`}
+                  type="file" accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadLogo(s.id, f); e.target.value = ''; }}
+                />
+              </div>
               <div style={{ display: 'flex', gap: '0.375rem' }}>
                 <button onClick={() => { setForm({ name: s.name, address: s.address || '', phone: s.phone || '', maxDiscount: 500 } as any); setEditId(s.id); setShowForm(true); setMsg(null); }} className="btn btn-ghost btn-icon btn-sm">
                   <Pencil size={13} />
@@ -401,6 +434,9 @@ function StoreManagement() {
               <div style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-text-primary)' }}>{s.name}</div>
               {s.address && <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>{s.address}</div>}
               {s.phone && <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{s.phone}</div>}
+              <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.375rem' }}>
+                {s.logo_url ? '✅ Logo personalizado' : '⬆️ Click en el ícono para subir logo'}
+              </div>
             </div>
             <span className={`badge ${s.active ? 'badge-green' : 'badge-red'}`} style={{ alignSelf: 'flex-start' }}>
               {s.active ? 'Activa' : 'Inactiva'}
