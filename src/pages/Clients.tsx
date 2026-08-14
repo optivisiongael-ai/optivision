@@ -168,7 +168,7 @@ export default function Clients() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: selectedClient ? '340px 1fr' : '1fr', gap: '1.5rem', alignItems: 'start' }}>
+      <div className={selectedClient ? 'client-grid' : ''} style={{ display: selectedClient ? undefined : 'block' }}>
         {/* Client list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ position: 'relative' }}>
@@ -265,7 +265,7 @@ export default function Clients() {
                 {saveMsg && <div className={`alert ${saveMsg.type === 'ok' ? 'alert-success' : 'alert-error'} fade-in`} style={{ marginBottom: '1rem' }}>{saveMsg.text}</div>}
 
                 {/* Info básica */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+                <div className="form-grid-2" style={{ marginBottom: '1rem' }}>
                   <div><label className="label">Nombre *</label><input className="input input-sm" value={f('full_name')} onChange={set('full_name')} /></div>
                   <div><label className="label">Teléfono</label><input className="input input-sm" value={f('phone')} onChange={set('phone')} /></div>
                   <div><label className="label">Email</label><input className="input input-sm" type="email" value={f('email')} onChange={set('email')} /></div>
@@ -289,7 +289,7 @@ export default function Clients() {
                 </div>
 
                 {/* LEJOS */}
-                <div style={{ background: 'var(--color-bg-input)', borderRadius: 10, padding: '0.875rem', marginBottom: '0.75rem', border: '1px solid var(--color-border)' }}>
+                <div className="rx-grid" style={{ background: 'var(--color-bg-input)', borderRadius: 10, padding: '0.875rem', marginBottom: '0.75rem', border: '1px solid var(--color-border)' }}>
                   <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-brand-400)', marginBottom: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📏 Lejos</p>
                   <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 1fr 1fr', gap: '0.4rem', alignItems: 'center', marginBottom: '0.375rem' }}>
                     <span />{['Esfera', 'Cilindro', 'Eje', 'DIP'].map(h => <span key={h} style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', textAlign: 'center' }}>{h}</span>)}

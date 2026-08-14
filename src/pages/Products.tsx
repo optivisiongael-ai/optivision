@@ -239,8 +239,8 @@ export default function Products() {
 
       {/* Form modal */}
       {showForm && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div className="card fade-in" style={{ width: '100%', maxWidth: 540 }}>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="card modal-content fade-in" style={{ width: '100%', maxWidth: 540, maxHeight: '92vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <h2 style={{ fontWeight: 700, fontSize: '1.125rem' }}>{editId ? 'Editar Producto' : 'Nuevo Producto'}</h2>
               <button onClick={() => setShowForm(false)} className="btn btn-ghost btn-icon"><X size={18} /></button>
@@ -253,7 +253,7 @@ export default function Products() {
             )}
 
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-grid-2">
                 <div>
                   <label className="label" htmlFor="sku-code">Código SKU *</label>
                   <input id="sku-code" className="input" required value={form.sku_code} onChange={e => setForm(f => ({ ...f, sku_code: e.target.value }))} placeholder="LNT-001" />
@@ -278,7 +278,7 @@ export default function Products() {
                 <label className="label" htmlFor="sku-price">Precio (Bs.) *</label>
                 <input id="sku-price" className="input" required type="number" min="0" step="0.01" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00" />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+              <div className="form-grid-3">
                 <div>
                   <label className="label" htmlFor="sku-initial-stock">Stock Inicial</label>
                   <input id="sku-initial-stock" className="input" type="number" min="0" step="1" value={form.initial_stock} onChange={e => setForm(f => ({ ...f, initial_stock: e.target.value }))} placeholder="0" disabled={!!editId} style={{ opacity: editId ? 0.5 : 1 }} />

@@ -279,7 +279,7 @@ function StoreManagement() {
       {showForm && (
         <div className="card fade-in" style={{ border: '1px solid var(--color-brand-700)', background: 'rgba(8,145,178,0.06)' }}>
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }}>
+            <div className="form-grid-2">
               <div>
                 <label className="label">Nombre *</label>
                 <input className="input" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Tienda Centro" />

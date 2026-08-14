@@ -404,3 +404,134 @@ select.input option { background: var(--color-bg-card); color: var(--color-text-
   .print-only { display: block !important; }
 }
 .print-only { display: none; }
+
+/* ── Responsive layouts ─────────────────────────────────────── */
+
+/* Sale step 2: products + summary side by side */
+.sale-grid {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Client list + detail */
+.client-grid {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Dashboard charts row */
+.dash-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+/* Generic 2-col form */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* Generic 3-col form */
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+
+/* Generic 4-col form */
+.form-grid-4 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 1rem;
+}
+
+/* Prescription table — always scrolls on overflow */
+.rx-grid {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Mobile breakpoint ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Main layouts collapse to 1 column */
+  .sale-grid,
+  .client-grid,
+  .dash-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Form grids collapse */
+  .form-grid-2,
+  .form-grid-3,
+  .form-grid-4 {
+    grid-template-columns: 1fr 1fr; /* keep 2 on mobile */
+  }
+
+  /* Page header stacks */
+  .page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem;
+  }
+  .page-header > .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Step indicators: hide text labels on mobile */
+  .step-text {
+    display: none;
+  }
+
+  /* Tables always scroll on mobile */
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Modals: full-width on mobile */
+  .modal-content {
+    max-width: 100% !important;
+    margin: 0 !important;
+    border-radius: 1rem 1rem 0 0 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+  .modal-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  /* Catalog manager: single column */
+  .catalog-sections {
+    flex-direction: column;
+  }
+
+  /* Hide sidebar nav text on narrow screens handled by Layout */
+  .sidebar-collapsed .nav-label {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Very small: all form grids to 1 col */
+  .form-grid-2,
+  .form-grid-3,
+  .form-grid-4 {
+    grid-template-columns: 1fr;
+  }
+  /* Smaller page title */
+  .page-title {
+    font-size: 1.25rem !important;
+  }
+}

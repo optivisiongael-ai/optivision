@@ -176,7 +176,7 @@ function AdminDashboard() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+      <div className="dash-grid-2">
         {/* Tiendas */}
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{

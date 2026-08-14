@@ -432,7 +432,7 @@ export default function NewSale() {
 
       {/* ── STEP 2: PRODUCTS ── */}
       {step === 'products' && (
-        <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '1.5rem', alignItems: 'start' }}>
+        <div className="sale-grid fade-in">
           {/* Left */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div className="card">
