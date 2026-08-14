@@ -25,6 +25,7 @@ function UserManagement() {
   const [storeAssignId, setStoreAssignId] = useState<string | null>(null);
   const [storeAssignVal, setStoreAssignVal] = useState('');
   const [storeAssignLoading, setStoreAssignLoading] = useState(false);
+  const [storeAssignMsg, setStoreAssignMsg] = useState<{ type: 'ok'|'error'; text: string } | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -93,10 +94,27 @@ function UserManagement() {
   };
 
   const handleChangeStore = async (userId: string) => {
+    if (!storeAssignVal) {
+      setStoreAssignMsg({ type: 'error', text: 'Selecciona una tienda.' });
+      return;
+    }
     setStoreAssignLoading(true);
-    await supabase.from('profiles').update({ store_id: storeAssignVal || null }).eq('id', userId);
-    setStoreAssignId(null);
-    setStoreAssignVal('');
+    setStoreAssignMsg(null);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ store_id: storeAssignVal })
+      .eq('id', userId);
+    if (error) {
+      setStoreAssignMsg({ type: 'error', text: `Error: ${error.message}` });
+      setStoreAssignLoading(false);
+      return;
+    }
+    setStoreAssignMsg({ type: 'ok', text: '✅ Tienda asignada' });
+    setTimeout(() => {
+      setStoreAssignId(null);
+      setStoreAssignVal('');
+      setStoreAssignMsg(null);
+    }, 1000);
     fetchUsers();
     setStoreAssignLoading(false);
   };
@@ -232,20 +250,27 @@ function UserManagement() {
               </div>
               {/* Inline store selector */}
               {storeAssignId === u.id && (
-                <div style={{ width: '100%', display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem', padding: '0.75rem', background: 'var(--color-bg-input)', borderRadius: 10, border: '1px solid var(--color-border)' }}>
-                  <select
-                    className="input input-sm"
-                    value={storeAssignVal}
-                    onChange={e => setStoreAssignVal(e.target.value)}
-                    style={{ flex: 1 }}
-                  >
-                    <option value="">-- Sin tienda --</option>
-                    {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                  <button onClick={() => handleChangeStore(u.id)} disabled={storeAssignLoading} className="btn btn-primary btn-sm">
-                    {storeAssignLoading ? '...' : <><Check size={13} /> Guardar</>}
-                  </button>
-                  <button onClick={() => setStoreAssignId(null)} className="btn btn-ghost btn-sm"><X size={13} /></button>
+                <div style={{ width: '100%', marginTop: '0.5rem', padding: '0.75rem', background: 'var(--color-bg-input)', borderRadius: 10, border: '1px solid var(--color-border)' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <select
+                      className="input input-sm"
+                      value={storeAssignVal}
+                      onChange={e => { setStoreAssignVal(e.target.value); setStoreAssignMsg(null); }}
+                      style={{ flex: 1 }}
+                    >
+                      <option value="">-- Seleccionar tienda --</option>
+                      {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                    <button onClick={() => handleChangeStore(u.id)} disabled={storeAssignLoading} className="btn btn-primary btn-sm">
+                      {storeAssignLoading ? '...' : <><Check size={13} /> Guardar</>}
+                    </button>
+                    <button onClick={() => { setStoreAssignId(null); setStoreAssignMsg(null); }} className="btn btn-ghost btn-sm"><X size={13} /></button>
+                  </div>
+                  {storeAssignMsg && (
+                    <p style={{ marginTop: '0.4rem', fontSize: '0.75rem', color: storeAssignMsg.type === 'ok' ? '#34d399' : '#f87171', fontWeight: 600 }}>
+                      {storeAssignMsg.text}
+                    </p>
+                  )}
                 </div>
               )}
               {resetMsg && resetMsg.userId === u.id && (
