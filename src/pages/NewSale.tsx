@@ -50,6 +50,8 @@ export default function NewSale() {
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [advancePayment, setAdvancePayment] = useState(0);
   const [notes, setNotes] = useState('');
+  const [deliveryDate, setDeliveryDate] = useState('');
+  const [deliveryTime, setDeliveryTime] = useState('');
 
   // Result
   const [saleId, setSaleId] = useState<string | null>(null);
@@ -58,13 +60,10 @@ export default function NewSale() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const [frameTypes, setFrameTypes] = useState<CatalogOption[]>([]);
-  const [crystalTypes, setCrystalTypes] = useState<CatalogOption[]>([]);
-
   useEffect(() => {
     Promise.all([
       supabase.from('products').select('id, name, sku_code, category, price, max_discount').eq('active', true).order('name'),
-      fetchCatalogByTypes(['FRAME_TYPE', 'CRYSTAL_TYPE', 'PRODUCT_CATEGORY']),
+      fetchCatalogByTypes(['PRODUCT_CATEGORY']),
     ]).then(([productsRes, cat]) => {
       const all = productsRes.data || [];
       const grouped: Record<string, any[]> = {};
@@ -73,8 +72,6 @@ export default function NewSale() {
         grouped[p.category].push(p);
       }
       setProductsByCategory(grouped);
-      setFrameTypes(cat.FRAME_TYPE || []);
-      setCrystalTypes(cat.CRYSTAL_TYPE || []);
       setCategories(cat.PRODUCT_CATEGORY || []);
     });
   }, [profile?.id]);
@@ -223,13 +220,8 @@ export default function NewSale() {
           oi_cyl_near: (newClientForm as any).oi_cyl_near || null,
           oi_axis_near: (newClientForm as any).oi_axis_near || null,
           add_near: (newClientForm as any).add_near || null,
-          // Extras
-          frame_type: (newClientForm as any).frame_type || null,
-          crystal_type: (newClientForm as any).crystal_type || null,
+          // Extras (age only — frame/crystal go to sale, not client)
           age: (newClientForm as any).age || null,
-          delivery_date: (newClientForm as any).delivery_date || null,
-          delivery_time: (newClientForm as any).delivery_time || null,
-          notes: (newClientForm as any).notes || null,
         }).select().single();
         if (ce) throw new Error(ce.message);
         clientId = newClient.id;
@@ -247,6 +239,8 @@ export default function NewSale() {
         subtotal: grossSubtotal, discount: totalDiscount, total, advance_payment: advancePayment, balance,
         status: balance === 0 ? 'COMPLETED' : 'PENDING',
         notes: notes.trim() || null,
+        delivery_date: deliveryDate || null,
+        delivery_time: deliveryTime || null,
       }).select().single();
       if (se) throw new Error(se.message);
 
@@ -388,29 +382,9 @@ export default function NewSale() {
                 </div>
                 <div>
                   <p className="section-title" style={{ marginBottom: '0.875rem' }}>🔭 Medidas Ópticas (Opcional)</p>
-
                   {/* Info básica del paciente */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
                     <div><label className="label">Edad</label><input className="input input-sm" value={(newClientForm as any).age || ''} onChange={e => setNewClientForm(f => ({ ...f, age: e.target.value }))} placeholder="Ej: 35" /></div>
-                    <div><label className="label">Armazón</label>
-                      <select className="input input-sm" value={(newClientForm as any).frame_type || ''} onChange={e => setNewClientForm(f => ({ ...f, frame_type: e.target.value }))}>
-                        <option value="">-- Seleccionar --</option>
-                        {frameTypes.map(v => <option key={v.value} value={v.label}>{v.label}</option>)}
-                      </select>
-                    </div>
-                    <div><label className="label">Tipo de Cristal</label>
-                      <select className="input input-sm" value={(newClientForm as any).crystal_type || ''} onChange={e => setNewClientForm(f => ({ ...f, crystal_type: e.target.value }))}>
-                        <option value="">-- Seleccionar --</option>
-                        {crystalTypes.map(v => <option key={v.value} value={v.label}>{v.label}</option>)}
-                      </select>
-                    </div>
-                    <div><label className="label">Entrega</label><input className="input input-sm" type="date" min={todayStr()} value={(newClientForm as any).delivery_date || ''} onChange={e => setNewClientForm(f => ({ ...f, delivery_date: e.target.value }))} /></div>
-                    <div><label className="label">Hora Entrega</label>
-                      <select className="input input-sm" value={(newClientForm as any).delivery_time || ''} onChange={e => setNewClientForm(f => ({ ...f, delivery_time: e.target.value }))}>
-                        <option value="">-- Hora --</option>
-                        {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                    </div>
                   </div>
 
                   {/* LEJOS */}
@@ -561,6 +535,19 @@ export default function NewSale() {
             )}
 
             <div className="card">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                <div>
+                  <label className="label">📅 Fecha de Entrega</label>
+                  <input className="input input-sm" type="date" min={todayStr()} value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} />
+                </div>
+                <div>
+                  <label className="label">🕐 Hora de Entrega</label>
+                  <select className="input input-sm" value={deliveryTime} onChange={e => setDeliveryTime(e.target.value)}>
+                    <option value="">-- Hora --</option>
+                    {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
               <label className="label" htmlFor="sale-notes">Notas de la Venta</label>
               <textarea id="sale-notes" className="input" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Observaciones, instrucciones de entrega..." style={{ resize: 'vertical' }} />
             </div>

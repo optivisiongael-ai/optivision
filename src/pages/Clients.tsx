@@ -3,16 +3,12 @@ import { useNavGuard } from '../lib/navGuard';
 import { supabase } from '../lib/supabase/client';
 import { useAuth } from '../lib/supabase/auth';
 import { Search, Edit2, X, Hash, Phone, Mail, Eye, Save, ChevronDown, ChevronUp } from 'lucide-react';
-import { fetchCatalogByTypes } from '../lib/useCatalog';
-import type { CatalogOption } from '../lib/useCatalog';
-import { todayStr, TIME_SLOTS } from '../lib/dateUtils';
+
 
 const fmt = (n: number) => `Bs. ${n.toLocaleString('es-BO', { minimumFractionDigits: 2 })}`;
 
 const emptyEdit = {
   full_name: '', phone: '', email: '', age: '',
-  frame_type: '', crystal_type: '',
-  delivery_date: '', delivery_time: '',
   // Lejos
   od_sphere: '', od_cylinder: '', od_axis: '', dip_far: '',
   oi_sphere: '', oi_cylinder: '', oi_axis: '',
@@ -39,8 +35,7 @@ export default function Clients() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null);
   const [showNear, setShowNear] = useState(false);
-  const [frameTypes, setFrameTypes] = useState<CatalogOption[]>([]);
-  const [crystalTypes, setCrystalTypes] = useState<CatalogOption[]>([]);
+
 
   // Finalize sale (inline in historial)
   const [finalizeClientSale, setFinalizeClientSale] = useState<any | null>(null);
@@ -64,12 +59,7 @@ export default function Clients() {
     if (selectedClient) fetchClientSales(selectedClient.id);
   };
 
-  useEffect(() => {
-    fetchCatalogByTypes(['FRAME_TYPE', 'CRYSTAL_TYPE']).then(cat => {
-      setFrameTypes(cat.FRAME_TYPE || []);
-      setCrystalTypes(cat.CRYSTAL_TYPE || []);
-    });
-  }, []);
+
 
   // Block in-app SPA navigation when editing
   const { setGuard } = useNavGuard();
@@ -134,10 +124,7 @@ export default function Clients() {
       phone: selectedClient.phone || '',
       email: selectedClient.email || '',
       age: selectedClient.age || '',
-      frame_type: selectedClient.frame_type || '',
-      crystal_type: selectedClient.crystal_type || '',
-      delivery_date: selectedClient.delivery_date || '',
-      delivery_time: selectedClient.delivery_time || '',
+
       od_sphere: selectedClient.od_sphere || '',
       od_cylinder: selectedClient.od_cylinder || '',
       od_axis: selectedClient.od_axis || '',
@@ -169,10 +156,7 @@ export default function Clients() {
       phone: editForm.phone.trim() || null,
       email: editForm.email.trim() || null,
       age: editForm.age || null,
-      frame_type: editForm.frame_type || null,
-      crystal_type: editForm.crystal_type || null,
-      delivery_date: editForm.delivery_date || null,
-      delivery_time: editForm.delivery_time || null,
+
       od_sphere: editForm.od_sphere || null, od_cylinder: editForm.od_cylinder || null,
       od_axis: editForm.od_axis || null, dip_far: editForm.dip_far || null,
       oi_sphere: editForm.oi_sphere || null, oi_cylinder: editForm.oi_cylinder || null,
@@ -318,27 +302,7 @@ export default function Clients() {
                   <div><label className="label">Teléfono</label><input className="input input-sm" value={f('phone')} onChange={set('phone')} /></div>
                   <div><label className="label">Email</label><input className="input input-sm" type="email" value={f('email')} onChange={set('email')} /></div>
                   <div><label className="label">Edad</label><input className="input input-sm" value={f('age')} onChange={set('age')} placeholder="Ej: 35" /></div>
-                  <div>
-                    <label className="label">Armazón</label>
-                    <select className="input input-sm" value={f('frame_type')} onChange={set('frame_type')}>
-                      <option value="">-- Seleccionar --</option>
-                      {frameTypes.map(v => <option key={v.value} value={v.label}>{v.label}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="label">Cristales</label>
-                    <select className="input input-sm" value={f('crystal_type')} onChange={set('crystal_type')}>
-                      <option value="">-- Seleccionar --</option>
-                      {crystalTypes.map(v => <option key={v.value} value={v.label}>{v.label}</option>)}
-                    </select>
-                  </div>
-                  <div><label className="label">Fecha Entrega</label><input className="input input-sm" type="date" min={todayStr()} value={f('delivery_date')} onChange={set('delivery_date')} /></div>
-                  <div><label className="label">Hora Entrega</label>
-                    <select className="input input-sm" value={f('delivery_time')} onChange={e => setEditForm(prev => ({ ...prev, delivery_time: e.target.value }))}>
-                      <option value="">-- Hora --</option>
-                      {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
+
                 </div>
 
                 {/* LEJOS */}
@@ -403,12 +367,9 @@ export default function Clients() {
                   <h3 style={{ fontWeight: 700, fontSize: '0.9375rem' }}>Medidas Ópticas</h3>
                 </div>
 
-                {/* Extra info */}
-                {(selectedClient.frame_type || selectedClient.crystal_type || selectedClient.age) && (
+                {selectedClient.age && (
                   <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem', fontSize: '0.8rem' }}>
-                    {selectedClient.age && <span className="badge badge-gray">Edad: {selectedClient.age}</span>}
-                    {selectedClient.frame_type && <span className="badge badge-blue">Armación: {selectedClient.frame_type}</span>}
-                    {selectedClient.crystal_type && <span className="badge badge-teal">Cristal: {selectedClient.crystal_type}</span>}
+                    <span className="badge badge-gray">Edad: {selectedClient.age}</span>
                   </div>
                 )}
 
