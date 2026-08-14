@@ -76,6 +76,8 @@ export default async function handler(req: any, res: any) {
       const existing = all?.users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
       if (!existing) { res.status(500).json({ success: false, error: 'User already exists but not found in list' }); return; }
       userId = existing.id;
+      // Update password so the generated password we show is actually valid
+      await admin.auth.admin.updateUserById(userId, { password: generatedPassword });
     } else {
       userId = created!.user!.id;
     }
