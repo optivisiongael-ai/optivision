@@ -6,7 +6,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
-import Inventory from './pages/Inventory';
+
 import Settings from './pages/Settings';
 import NewSale from './pages/NewSale';
 import Clients from './pages/Clients';
@@ -50,7 +50,7 @@ function AppRoutes() {
 
         {/* Rutas ADMIN */}
         <Route path="products" element={<AdminRoute><Products /></AdminRoute>} />
-        <Route path="inventory" element={<AdminRoute><Inventory /></AdminRoute>} />
+        <Route path="inventory" element={<Navigate to="/products?tab=inventory" replace />} />
         <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
         {/* Rutas VENDEDOR */}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Package, Warehouse, Settings, ShoppingCart,
+  LayoutDashboard, Package, Settings, ShoppingCart,
   Users, LogOut, Menu, X, ChevronRight, Moon, Sun, ClipboardList
 } from 'lucide-react';
 import { useAuth } from '../lib/supabase/auth';
@@ -25,8 +25,7 @@ export default function Layout() {
   const adminNav = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Ventas', path: '/ventas', icon: ClipboardList },
-    { name: 'Productos / SKUs', path: '/products', icon: Package },
-    { name: 'Inventario', path: '/inventory', icon: Warehouse },
+    { name: 'Productos', path: '/products', icon: Package },
     { name: 'Configuración', path: '/settings', icon: Settings },
   ];
 
