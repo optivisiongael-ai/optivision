@@ -223,7 +223,12 @@ export default function NewSale() {
         await supabase.from('audit_log').insert({ user_id: profile?.id, user_email: profile?.email, action: 'CLIENTE_CREADO', entity_type: 'CLIENT', entity_id: clientId, description: `Nuevo cliente: ${newClientForm.full_name} (${clientCode})` });
       }
 
-      const saleCodeGen = `VNT-${Date.now().toString().slice(-7)}`;
+      const now = new Date();
+      const yy = String(now.getFullYear()).slice(-2);
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const seq = Date.now().toString().slice(-4);
+      const saleCodeGen = `VNT-${yy}${mm}${dd}-${seq}`;
       const { data: newSale, error: se } = await supabase.from('sales').insert({
         sale_code: saleCodeGen, client_id: clientId, store_id: profile?.store_id, seller_id: profile?.id,
         subtotal: grossSubtotal, discount: totalDiscount, total, advance_payment: advancePayment, balance,

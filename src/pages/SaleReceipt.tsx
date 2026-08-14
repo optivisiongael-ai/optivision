@@ -59,8 +59,24 @@ export default function SaleReceipt() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9', padding: '1.5rem', fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <div style={{ maxWidth: 480, margin: '0 auto' }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media print {
+          .no-print { display: none !important; }
+          body { background: white; }
+          .receipt-wrapper { box-shadow: none !important; }
+        }
+      `}</style>
+      {/* Print button — hidden when printing */}
+      <div className="no-print" style={{ maxWidth: 480, margin: '0 auto 1rem', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+        <button
+          onClick={() => window.print()}
+          style={{ padding: '0.5rem 1.25rem', background: '#0d9488', color: 'white', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+        >
+          🖨️ Imprimir boleta
+        </button>
+      </div>
+      <div style={{ maxWidth: 480, margin: '0 auto' }} className="receipt-wrapper">
         {/* Header */}
         <div style={{ background: 'white', borderRadius: 20, padding: '2rem', marginBottom: '1rem', boxShadow: '0 4px 24px rgba(0,0,0,0.08)', textAlign: 'center' }}>
           <img src="/logo.png" alt="OPTIVISION" style={{ height: 90, width: 'auto', objectFit: 'contain', marginBottom: '0.75rem' }} />
