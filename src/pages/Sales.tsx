@@ -73,11 +73,10 @@ export default function Sales() {
     setPendingLoading(true);
     let q = supabase.from('sales')
       .select(`
-        id, sale_code, status, subtotal, discount, total, advance_payment, balance,
+        id, sale_code, status, seller_id, subtotal, discount, total, advance_payment, balance,
         notes, created_at, delivery_date,
         clients:client_id (full_name, client_code, phone),
         stores:store_id (name),
-        profiles:seller_id (full_name, email),
         sale_items (id, quantity, unit_price, discount_amount, subtotal,
           products:product_id (name, category))
       `)
@@ -86,7 +85,12 @@ export default function Sales() {
     if (!admin) q = q.eq('seller_id', sid);
     if (sf !== 'ALL') q = q.eq('status', sf);
     const { data, error } = await q;
-    if (error) console.error('Sales loadPending error:', error);
+    if (error) {
+      console.error('loadPending error:', error.message, '|', error.details, '|', error.hint);
+      setPendingLoading(false);
+      return;
+    }
+    console.log('loadPending OK — rows:', data?.length);
     setPendingSales(data || []);
     setPendingLoading(false);
   };
@@ -372,58 +376,73 @@ export default function Sales() {
           {/* List */}
           {pendingLoading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}><div className="spinner" /></div>
-          ) : filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-muted)' }}>
-              <ShoppingBag size={40} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
-              <p>No hay ventas{search ? ` que coincidan con "${search}"` : ''}</p>
-              {search && <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>Busca por código de venta (ej: VNT-260814-0001)</p>}
-            </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {filtered.map(sale => {
-                const st = STATUS_LABELS[sale.status] || STATUS_LABELS.PENDING;
-                const Icon = st.icon;
-                return (
-                  <div key={sale.id} className="card fade-in"
-                    style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', cursor: sale.status === 'PENDING' ? 'pointer' : 'default' }}
-                    onClick={() => sale.status === 'PENDING' && openFinalize(sale)}>
-                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: `${st.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Icon size={18} style={{ color: st.color }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.9375rem', marginBottom: '0.125rem' }}>
-                        {sale.clients?.full_name || <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Sin nombre</span>}
-                        <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: '0.5rem' }}>{sale.clients?.client_code}</span>
+            <>
+              <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem', display: 'flex', gap: '1rem' }}>
+                <span>{pendingSales.length} venta{pendingSales.length !== 1 ? 's' : ''} cargada{pendingSales.length !== 1 ? 's' : ''}</span>
+                {search && <span>→ {filtered.length} coincidencia{filtered.length !== 1 ? 's' : ''} con "{search}"</span>}
+              </div>
+
+              {filtered.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-muted)' }}>
+                  <ShoppingBag size={40} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
+                  {pendingSales.length > 0 && search ? (
+                    <>
+                      <p>No hay coincidencias para "{search}"</p>
+                      <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                        Los nombres de clientes pueden no cargar si falta migración SQL.<br />
+                        Busca por código de venta (ej: VNT-260814-0001)
+                      </p>
+                    </>
+                  ) : (
+                    <p>No hay ventas {statusFilter !== 'ALL' ? `con estado "${STATUS_LABELS[statusFilter]?.label || statusFilter}"` : ''}</p>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {filtered.map(sale => {
+                    const st = STATUS_LABELS[sale.status] || STATUS_LABELS.PENDING;
+                    const Icon = st.icon;
+                    return (
+                      <div key={sale.id} className="card fade-in"
+                        style={{ padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', cursor: sale.status === 'PENDING' ? 'pointer' : 'default' }}
+                        onClick={() => sale.status === 'PENDING' && openFinalize(sale)}>
+                        <div style={{ width: 38, height: 38, borderRadius: '50%', background: `${st.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Icon size={18} style={{ color: st.color }} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.9375rem', marginBottom: '0.125rem' }}>
+                            {sale.clients?.full_name || <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Sin nombre</span>}
+                            <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: '0.5rem' }}>{sale.clients?.client_code}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '1rem', fontSize: '0.78rem', color: 'var(--color-text-muted)', flexWrap: 'wrap' }}>
+                            <span style={{ fontFamily: 'monospace', color: 'var(--color-brand-400)' }}>{sale.sale_code}</span>
+                            <span>{fmtDate(sale.created_at)}</span>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.9375rem' }}>{fmt(sale.total)}</div>
+                          {sale.balance > 0 && <div style={{ fontSize: '0.78rem', color: '#f59e0b', fontWeight: 600 }}>Saldo: {fmt(sale.balance)}</div>}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.375rem', flexShrink: 0 }}>
+                          <span style={{ background: `${st.color}20`, color: st.color, padding: '0.2rem 0.6rem', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700 }}>{st.label}</span>
+                          {sale.status === 'PENDING' && (
+                            <button onClick={e => { e.stopPropagation(); openFinalize(sale); }} className="btn btn-primary btn-sm" style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}>
+                              ✓ Finalizar
+                            </button>
+                          )}
+                          <button onClick={e => { e.stopPropagation(); window.open(`${APP_URL}#/boleta/${sale.id}`, '_blank'); }}
+                            className="btn btn-ghost btn-sm" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <Printer size={12} /> Boleta
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '1rem', fontSize: '0.78rem', color: 'var(--color-text-muted)', flexWrap: 'wrap' }}>
-                        <span style={{ fontFamily: 'monospace', color: 'var(--color-brand-400)' }}>{sale.sale_code}</span>
-                        <span>{fmtDate(sale.created_at)}</span>
-                        {isAdmin && sale.profiles?.full_name && <span>👤 {sale.profiles.full_name}</span>}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.9375rem' }}>{fmt(sale.total)}</div>
-                      {sale.balance > 0 && <div style={{ fontSize: '0.78rem', color: '#f59e0b', fontWeight: 600 }}>Saldo: {fmt(sale.balance)}</div>}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.375rem', flexShrink: 0 }}>
-                      <span style={{ background: `${st.color}20`, color: st.color, padding: '0.2rem 0.6rem', borderRadius: 99, fontSize: '0.72rem', fontWeight: 700 }}>{st.label}</span>
-                      {sale.status === 'PENDING' && (
-                        <button onClick={e => { e.stopPropagation(); openFinalize(sale); }} className="btn btn-primary btn-sm" style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}>
-                          ✓ Finalizar
-                        </button>
-                      )}
-                      <button onClick={e => { e.stopPropagation(); window.open(`${APP_URL}#/boleta/${sale.id}`, '_blank'); }}
-                        className="btn btn-ghost btn-sm" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <Printer size={12} /> Boleta
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
-        </>
-      )}
 
       {/* ─────────────────── TAB: HISTORY ─────────────────────── */}
       {tab === 'history' && (
